@@ -36,12 +36,12 @@ def initialize_players_position(list_players):
         count += 1
     return players_position
 
-def initialize_players_position_2(list_players):
-    players_position = {player:pos for player, pos in zip(list_players, range(len(list_players)))}
+def initialize_players_information(list_players):
+    players_position = {player:pos for player, pos in zip(list_players, random.sample(range(len(list_players))))} 
     return players_position
 
 def change_players_position(suivi_pos):
-    for key in previous_pos.keys():
+    for key in suivi_pos.keys():
         if suivi_pos[key] != len(suivi_pos):
             suivi_pos[key] += 1
         elif suivi_pos[key] == len(suivi_pos):
@@ -49,13 +49,11 @@ def change_players_position(suivi_pos):
     return suivi_pos
 
 
-
 def lauch_game():
     game_type = game_type()
     list_players = add_player()
     LJ_position = random.choice(list_players)
-    players
-    # while party continue:
+        # while party continue:
         # new_turn()
 
 def new_turn(list_players, game_type):
