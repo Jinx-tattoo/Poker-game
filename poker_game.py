@@ -6,3 +6,4 @@ for color in colors:
         deck_of_cards.append(card + " of " + color)
 print(deck_of_cards)
 a = "blablabla"
+b = "blablabla2"
