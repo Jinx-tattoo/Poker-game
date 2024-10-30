@@ -61,20 +61,68 @@ def lauch_game():
 
 def new_turn(players_informations, game_type, deck_of_cards_fictive=deck_of_cards.copy()):
     players_inf_turn = {}
-    pot = 1/100 * list_stack[game_type]
+    pot = 1.5/100 * list_stack[game_type]
     for player in players_informations.keys():
         tirage = random.choices(deck_of_cards_fictive, k=2)
         deck_of_cards_fictive.remove(tirage[0], tirage[1])
-        players_inf_turn[positions_need[players_informations[player][1]]] = [player, True, tirage, 0] # {position_jeu : Name_player, active/out, tirage, amount_invest}
+        players_inf_turn[positions_need[players_informations[player][1]]] = [player, players_informations[player][0], True, tirage, 0] # {position_jeu : [Name_player, starting_stack, active/out, tirage, amount_invest]}
     
-
-def new_street(players_inf_turn, deck_of_card_fictive):
-    players_action = {}
-    for position in players_inf_turn:
-        if players_inf_turn[position][1]:
-            players_action[players_inf_turn[position][0]] = [input("raise or check"), 0]
+    if len(players_informations) < 3:
+        players_inf_turn["Button"][-1] = players_inf_turn["Button"][-1] - 1/100 * list_stack
+        players_inf_turn["Small Blind"][-1] = players_inf_turn["Small Blind"][-1] - 0.5/100 * list_stack
+    else:
+        players_inf_turn["Big Blind"][-1] = players_inf_turn["Big Blind"][-1] - 1/100 * list_stack
+        players_inf_turn["Small Blind"][-1] = players_inf_turn["Small Blind"][-1] - 0.5/100 * list_stack
     
+    new_street(players_inf_turn, deck_of_cards_fictive, pot)
+    
+def new_street_preflop(players_inf_turn_fictive, deck_of_card_fictive, pot):
+    biggest_bet = pot
+    for position in players_inf_turn_fictive:
+        if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][4]) < biggest_bet:
+            temporary_decision = input("call, raise or fold")
+            if temporary_decision == "call":
+                players_inf_turn_fictive[position][3] = biggest_bet
+            elif temporary_decision == "raise":
+                biggest_bet = get_number_in_range(2*biggest_bet, players_inf_turn_fictive[position][2])
 
+            players_inf_turn_fictive[position].append(input("call or raise"), 0)
+    return
+    
+def new_street(players_inf_turn_fictive, deck_of_card_fictive, pot_fictive):
+    biggest_bet = pot_fictive
+    count_eliminated_player = 0
+    action = True
+    while (count_eliminated_player != len(players_inf_turn_fictive)) - 1 and (action == True):
+        action = False
+        for position in players_inf_turn_fictive:
+            players_inf_turn_fictive[position].append(0)                                                            # add a element in the list : amount invest on the street !
+            if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][5]) == biggest_bet:
+                temporary_decision = input("check or raise")
+                if temporary_decision == "check":
+                    action = False
+                elif temporary_decision == "raise":
+                    action = True
+                    biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn_fictive[position][1])
+                    players_inf_turn_fictive[position][5] = biggest_bet
+                    pot_fictive += biggest_bet
+            if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][5]) < biggest_bet:
+                temporary_decision = input("fold, call or reraise")
+                if temporary_decision == "fold":
+                    count_eliminated_player += 1
+                    players_inf_turn_fictive[position][2] = False
+                elif temporary_decision == "call":
+                    action = False
+                    players_inf_turn_fictive[position][5] = biggest_bet
+                    pot_fictive += biggest_bet
+                elif temporary_decision == "reraise":
+                    action = True
+                    biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn_fictive[position][1])
+                    players_inf_turn_fictive[position][5] = biggest_bet
+                    pot_fictive += biggest_bet
+
+        
+    
 
 print(len({"a":2, 2:8, "err": "efff"}))
 
