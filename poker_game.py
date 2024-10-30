@@ -12,6 +12,7 @@ for color in colors:
 positions_need = {1: "Button", 2: "Small Blind", 3: "Big Blind",  4: "Cut-Off", 5: "Hijack", 6: "Under The Gun"}
 speak_order_postflop = {1: "Small Blind", 2: "Big Blind", 3: "Under The Gun", 4: "Hijack", 5: "Cut-Off", 6: "Button"}
 speak_order_preflop = {1: "Under The Gun", 2: "Hijack", 3: "Cut-Off", 4: "Button", 5: "Small Blind", 6: "Big Blind"}
+street = {0: "preflop", 1: "flop", 2: "turn", 3: "river"}
 
 list_stack = {"NL2": 200, "NL5": 500, "NL10": 1000, "NL20": 20000, "NL50": 5000}
 
@@ -52,31 +53,53 @@ def change_players_position(players_informations):
             players_informations[key][1] = 1
     return players_informations
 
+def new_tirage(street, deck):
+    if street == "flop":
+        new_tirage = random.choices(deck, k=3)
+        deck.remove(new_tirage[0], new_tirage[1], new_tirage[2])
+        print(f"flop : {new_tirage[0]}  {new_tirage[1]}  {new_tirage[2]}")
+        return new_tirage
+    elif street == "turn":
+        new_tirage = random.choices(deck, k=1)
+        deck.remove(new_tirage[0])
+        print(f"turn : {new_tirage[0]}")
+        return new_tirage
+    elif street == "river":
+        new_tirage = random.choices(deck, k=1)
+        deck.remove(new_tirage[0])
+        print(f"river : {new_tirage[0]}")
+        return new_tirage
 
-def lauch_game():
-    game_type = game_type()
-    list_players = add_player()
-        # while party continue:
-        # new_turn()
+def update_amount_invest(players_inf_turn):
+    for position in players_inf_turn:
+        players_inf_turn[position][4] += players_inf_turn[position][5]
+        players_inf_turn[position][5] = 0
+    return players_inf_turn
+    
+def state_hand(players_inf_turn, street="preflop"):
+    count = 0
+    for position in players_inf_turn:
+        if players_inf_turn[position][2] == True:
+            count += 1
+    if count > 1 and street == "preflop":
+        street = "flop"
+        state = True
+        return street, state
+    elif count > 1 and street == "flop":
+        street = "turn"
+        state = True
+        return street, state
+    elif count > 1 and street == "turn":
+        street = "river"
+        state = True
+        return street, state
+    elif count <= 1 or street == "river":
+        street = "turn"
+        state = False
+        return street, state
 
-def new_turn(players_informations, game_type, deck_of_cards_fictive=deck_of_cards.copy()):
-    players_inf_turn = {}
-    pot = 1.5/100 * list_stack[game_type]
-    for player in players_informations.keys():
-        tirage = random.choices(deck_of_cards_fictive, k=2)
-        deck_of_cards_fictive.remove(tirage[0], tirage[1])
-        players_inf_turn[positions_need[players_informations[player][1]]] = [player, players_informations[player][0], True, tirage, 0] # {position_jeu : [Name_player, starting_stack, active/out, tirage, amount_invest]}
-    
-    if len(players_informations) < 3:
-        players_inf_turn["Button"][-1] = players_inf_turn["Button"][-1] - 1/100 * list_stack
-        players_inf_turn["Small Blind"][-1] = players_inf_turn["Small Blind"][-1] - 0.5/100 * list_stack
-    else:
-        players_inf_turn["Big Blind"][-1] = players_inf_turn["Big Blind"][-1] - 1/100 * list_stack
-        players_inf_turn["Small Blind"][-1] = players_inf_turn["Small Blind"][-1] - 0.5/100 * list_stack
-    
-    new_street(players_inf_turn, deck_of_cards_fictive, pot)
-    
-def new_street_preflop(players_inf_turn_fictive, deck_of_card_fictive, pot):
+
+def preflop(players_inf_turn_fictive, deck_of_card_fictive, pot):
     biggest_bet = pot
     for position in players_inf_turn_fictive:
         if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][4]) < biggest_bet:
@@ -89,14 +112,13 @@ def new_street_preflop(players_inf_turn_fictive, deck_of_card_fictive, pot):
             players_inf_turn_fictive[position].append(input("call or raise"), 0)
     return
     
-def new_street(players_inf_turn_fictive, deck_of_card_fictive, pot_fictive):
+def new_street(players_inf_turn_fictive, pot_fictive):
     biggest_bet = pot_fictive
     count_eliminated_player = 0
     action = True
     while (count_eliminated_player != len(players_inf_turn_fictive)) - 1 and (action == True):
         action = False
         for position in players_inf_turn_fictive:
-            players_inf_turn_fictive[position].append(0)                                                            # add a element in the list : amount invest on the street !
             if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][5]) == biggest_bet:
                 temporary_decision = input("check or raise")
                 if temporary_decision == "check":
@@ -120,11 +142,42 @@ def new_street(players_inf_turn_fictive, deck_of_card_fictive, pot_fictive):
                     biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn_fictive[position][1])
                     players_inf_turn_fictive[position][5] = biggest_bet
                     pot_fictive += biggest_bet
-
+    return pot_fictive
         
+def new_hand(players_informations, game_type, deck_of_cards_fictive=deck_of_cards.copy()):
+    players_inf_turn = {}
+    pot = 1.5/100 * list_stack[game_type]
+    for player in players_informations.keys():
+        tirage = random.choices(deck_of_cards_fictive, k=2)
+        deck_of_cards_fictive.remove(tirage[0], tirage[1])
+        players_inf_turn[positions_need[players_informations[player][1]]] = [player, players_informations[player][0], True, tirage, 0, 0] # {position_jeu : [Name_player, starting_stack, active/out, tirage, amount_invest]}
+    
+    if len(players_informations) < 3:
+        players_inf_turn["Button"][-1] = players_inf_turn["Button"][-1] - 1/100 * list_stack
+        players_inf_turn["Small Blind"][-1] = players_inf_turn["Small Blind"][-1] - 0.5/100 * list_stack
+    else:
+        players_inf_turn["Big Blind"][-1] = players_inf_turn["Big Blind"][-1] - 1/100 * list_stack
+        players_inf_turn["Small Blind"][-1] = players_inf_turn["Small Blind"][-1] - 0.5/100 * list_stack
+    
+    pot += preflop()
+    update_amount_invest(players_inf_turn)
+    street, state = state_hand(players_inf_turn)
+
+    while state == True:        
+        new_tirage(street, deck_of_cards_fictive)
+        pot += new_street(players_inf_turn, deck_of_cards_fictive, pot)
+        update_amount_invest(players_inf_turn)
+        street, state = state_hand(players_inf_turn)
     
 
-print(len({"a":2, 2:8, "err": "efff"}))
+
+
+
+def lauch_game():
+    game_type = game_type()
+    list_players = add_player()
+        # while party continue:
+        # new_turn()
 
 
 
