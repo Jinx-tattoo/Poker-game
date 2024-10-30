@@ -8,7 +8,6 @@ for color in colors:
     for card in deck_of_cards_notfull:
         deck_of_cards.append(card + " of " + color)
 print(deck_of_cards)
-
 class Player:
     def __init__(self, name):
         self.name = name
@@ -41,7 +40,6 @@ def new_turn(list_players, game_type):
 
 
 # print(random.choice(1, 2, 3))
-
 
 
 
