@@ -5,3 +5,4 @@ for color in colors:
     for card in deck_of_cards_notfull:
         deck_of_cards.append(card + " of " + color)
 print(deck_of_cards)
+a = "blablabla"
