@@ -98,6 +98,23 @@ def state_hand(players_inf_turn, street="preflop"):
         state = False
         return street, state
 
+def update_stack(players_inf_turn, pot):
+    for positon in players_inf_turn:
+        if players_inf_turn[positon][2] == True:
+            players_inf_turn[positon][1] += pot - players_inf_turn[positon][4]
+            players_inf_turn[positon][4] = 0
+            players_inf_turn[positon][5] = 0
+        elif players_inf_turn[positon][2] == False:
+            players_inf_turn[positon][1] -= players_inf_turn[positon][4]
+            players_inf_turn[positon][4] = 0
+            players_inf_turn[positon][5] = 0
+    return
+
+def activate_player(players_inf_turn):
+    for positon in players_inf_turn:
+        if players_inf_turn[positon][1] > 0:
+            players_inf_turn[positon][2] = True
+    return
 
 def preflop(players_inf_turn_fictive, deck_of_card_fictive, pot):
     biggest_bet = pot
@@ -116,10 +133,10 @@ def new_street(players_inf_turn_fictive, pot_fictive):
     biggest_bet = pot_fictive
     count_eliminated_player = 0
     action = True
-    while (count_eliminated_player != len(players_inf_turn_fictive)) - 1 and (action == True):
+    while (count_eliminated_player != len(players_inf_turn_fictive) - 1) and (action == True):
         action = False
         for position in players_inf_turn_fictive:
-            if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][5]) == biggest_bet:
+            if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][5] == biggest_bet) and (players_inf_turn_fictive[position][1] > players_inf_turn_fictive[position][4]):
                 temporary_decision = input("check or raise")
                 if temporary_decision == "check":
                     action = False
@@ -128,15 +145,18 @@ def new_street(players_inf_turn_fictive, pot_fictive):
                     biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn_fictive[position][1])
                     players_inf_turn_fictive[position][5] = biggest_bet
                     pot_fictive += biggest_bet
-            if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][5]) < biggest_bet:
+            if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][5] < biggest_bet) and (players_inf_turn_fictive[position][1] > players_inf_turn_fictive[position][4]):
                 temporary_decision = input("fold, call or reraise")
                 if temporary_decision == "fold":
                     count_eliminated_player += 1
                     players_inf_turn_fictive[position][2] = False
                 elif temporary_decision == "call":
                     action = False
-                    players_inf_turn_fictive[position][5] = biggest_bet
-                    pot_fictive += biggest_bet
+                    if (players_inf_turn_fictive[position][1] - players_inf_turn_fictive[position][4] + players_inf_turn_fictive[position][5]) <= biggest_bet:
+                        players_inf_turn_fictive[position][5] = players_inf_turn_fictive[position][1] - players_inf_turn_fictive[position][4] 
+                        pot_fictive += players_inf_turn_fictive[position][1] - players_inf_turn_fictive[position][4] 
+                    else:
+                        players_inf_turn_fictive[position][5] = biggest_bet
                 elif temporary_decision == "reraise":
                     action = True
                     biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn_fictive[position][1])
@@ -169,6 +189,7 @@ def new_hand(players_informations, game_type, deck_of_cards_fictive=deck_of_card
         update_amount_invest(players_inf_turn)
         street, state = state_hand(players_inf_turn)
     
+    update_stack(players_inf_turn, pot)
 
 
 
@@ -176,6 +197,7 @@ def new_hand(players_informations, game_type, deck_of_cards_fictive=deck_of_card
 def lauch_game():
     game_type = game_type()
     list_players = add_player()
+    
         # while party continue:
         # new_turn()
 
