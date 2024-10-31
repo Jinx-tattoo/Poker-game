@@ -30,6 +30,12 @@ def add_player():
             list_players.append(player)
     return list_players
 
+def activate_player(players_inf_turn):
+    for positon in players_inf_turn:
+        if players_inf_turn[positon][1] > 0:
+            players_inf_turn[positon][2] = True
+    return
+
 def get_number_in_range(min_val, max_val):
     while True:
         try:
@@ -78,25 +84,37 @@ def update_amount_invest(players_inf_turn):
     
 def state_hand(players_inf_turn, street="preflop"):
     count = 0
+    count_all_in = 0
     for position in players_inf_turn:
         if players_inf_turn[position][2] == True:
             count += 1
+        if round(players_inf_turn[position][1] - players_inf_turn[position][2]) == 0:
+            count_all_in += 1 
+    if count - count_all_in == 1:
+        street = "river"
+        state = True
+        order_show_card = True
+        return street, state, order_show_card
     if count > 1 and street == "preflop":
         street = "flop"
         state = True
-        return street, state
+        order_show_card = False
+        return street, state, order_show_card
     elif count > 1 and street == "flop":
         street = "turn"
         state = True
-        return street, state
+        order_show_card = False
+        return street, state, order_show_card
     elif count > 1 and street == "turn":
         street = "river"
         state = True
-        return street, state
+        order_show_card = False
+        return street, state, order_show_card
     elif count <= 1 or street == "river":
         street = "turn"
         state = False
-        return street, state
+        order_show_card = True
+        return street, state, order_show_card
 
 def update_stack(players_inf_turn, pot):
     for positon in players_inf_turn:
@@ -108,12 +126,6 @@ def update_stack(players_inf_turn, pot):
             players_inf_turn[positon][1] -= players_inf_turn[positon][4]
             players_inf_turn[positon][4] = 0
             players_inf_turn[positon][5] = 0
-    return
-
-def activate_player(players_inf_turn):
-    for positon in players_inf_turn:
-        if players_inf_turn[positon][1] > 0:
-            players_inf_turn[positon][2] = True
     return
 
 def preflop(players_inf_turn_fictive, deck_of_card_fictive, pot):
@@ -181,15 +193,19 @@ def new_hand(players_informations, game_type, deck_of_cards_fictive=deck_of_card
     
     pot += preflop()
     update_amount_invest(players_inf_turn)
-    street, state = state_hand(players_inf_turn)
+    street, state, order_show_card = state_hand(players_inf_turn)
+    if order_show_card == True:
+        show_card()
 
     while state == True:        
         new_tirage(street, deck_of_cards_fictive)
         pot += new_street(players_inf_turn, deck_of_cards_fictive, pot)
         update_amount_invest(players_inf_turn)
-        street, state = state_hand(players_inf_turn)
+        street, state, order_show_card = state_hand(players_inf_turn)
+        if order_show_card == True:
+            show_card()
     
-    update_stack(players_inf_turn, pot)
+        update_stack(players_inf_turn, pot)
 
 
 
@@ -200,7 +216,6 @@ def lauch_game():
     
         # while party continue:
         # new_turn()
-
 
 
 
