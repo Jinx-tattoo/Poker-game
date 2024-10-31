@@ -12,11 +12,16 @@ for color in colors:
 positions_need = {1: "Button", 2: "Small Blind", 3: "Big Blind",  4: "Cut-Off", 5: "Hijack", 6: "Under The Gun"}
 speak_order_postflop = {1: "Small Blind", 2: "Big Blind", 3: "Under The Gun", 4: "Hijack", 5: "Cut-Off", 6: "Button"}
 speak_order_preflop = {1: "Under The Gun", 2: "Hijack", 3: "Cut-Off", 4: "Button", 5: "Small Blind", 6: "Big Blind"}
-street = {0: "preflop", 1: "flop", 2: "turn", 3: "river"}
+dico_street = {0: "preflop", 1: "flop", 2: "turn", 3: "river"}
 
 list_stack = {"NL2": 200, "NL5": 500, "NL10": 1000, "NL20": 20000, "NL50": 5000}
 
+order_jeu = {0: "high", 1: "pair", 2: "double pair", 3: "tripp", 4: "suit", 5: "flush", 6: "square", 7: "quinte flush"}
+
 # Definition function for the game
+
+
+
 def game_type():
     game_type = input("wich variant of texas holdem would you like to play ? You can enter NL2, NL5, NL10, NL20 or NL50")
     return game_type
@@ -128,6 +133,32 @@ def update_stack(players_inf_turn, pot):
             players_inf_turn[positon][5] = 0
     return
 
+def show_down(deck_of_cards_fictive, displayed_card):
+    while len(displayed_card) < 3:
+        street_pos = dico_street[len(displayed_card) + 1]
+        displayed_card.append(new_tirage(street_pos, deck_of_cards_fictive))
+    return displayed_card
+
+def determine_best_game(players_inf_turn, displayed_card):
+    player_win = ""
+    jeux_players = {}
+    for position in players_inf_turn:
+        if players_inf_turn[position][2] == True:
+            composition = players_inf_turn[3] + displayed_card[0] + [displayed_card[1]] + [displayed_card[2]]
+            jeu = determine_jeu(composition)
+            jeux_players[players_inf_turn[position][0]] = jeu
+    
+   
+    return
+
+def separate_figure_color(composition):
+    return
+
+def determine_jeu(composition):
+    # quinte flush
+    count_color
+    return
+
 def preflop(players_inf_turn_fictive, deck_of_card_fictive, pot):
     biggest_bet = pot
     for position in players_inf_turn_fictive:
@@ -194,16 +225,19 @@ def new_hand(players_informations, game_type, deck_of_cards_fictive=deck_of_card
     pot += preflop()
     update_amount_invest(players_inf_turn)
     street, state, order_show_card = state_hand(players_inf_turn)
+    displayed_card = []
     if order_show_card == True:
-        show_card()
-
+        displayed_card = show_down(players_inf_turn, deck_of_cards_fictive, street, displayed_card)
+        determine_best_game(players_inf_turn, displayed_card)
+    
     while state == True:        
-        new_tirage(street, deck_of_cards_fictive)
+        displayed_card.append(new_tirage(street, deck_of_cards_fictive))
         pot += new_street(players_inf_turn, deck_of_cards_fictive, pot)
         update_amount_invest(players_inf_turn)
         street, state, order_show_card = state_hand(players_inf_turn)
         if order_show_card == True:
-            show_card()
+            displayed_card = show_down(players_inf_turn, deck_of_cards_fictive, street, displayed_card)
+            determine_best_game(players_inf_turn, displayed_card)
     
         update_stack(players_inf_turn, pot)
 
