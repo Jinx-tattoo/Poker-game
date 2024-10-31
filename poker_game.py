@@ -15,11 +15,12 @@ class Card:
         pass    
 
 positions_need = {1: "Button", 2: "Small Blind", 3: "Big Blind",  4: "Cut-Off", 5: "Hijack", 6: "Under The Gun"}
-speak_order_postflop = {1: "Small Blind", 2: "Big Blind", 3: "Under The Gun", 4: "Hijack", 5: "Cut-Off", 6: "Button"}
-speak_order_preflop = {1: "Under The Gun", 2: "Hijack", 3: "Cut-Off", 4: "Button", 5: "Small Blind", 6: "Big Blind"}
+speak_order_postflop = {2: ["Small Blind", "Big Blind"], 3: ["Small Blind", "Big Blind", "Button"], 4: ["Small Blind", "Big Blind", "Cut-Off","Button"], 5: ["Small Blind", "Big Blind", "Hijack", "Cut-Off","Button"], 6: ["Small Blind", "Big Blind", "Under The Gun", "Hijack", "Cut-Off","Button"]}
+speak_order_preflop= ["Under The Gun", "Hijack", "Cut-Off", "Button", "Small Blind", "Big Blind"]
 dico_street = {0: "preflop", 1: "flop", 2: "turn", 3: "river"}
 list_stack = {"NL2": 200, "NL5": 500, "NL10": 1000, "NL20": 20000, "NL50": 5000}
-order_jeu = {0: "high", 1: "pair", 2: "double pair", 3: "tripp", 4: "suit", 5: "flush", 6: "square", 7: "quinte flush"}
+order_jeu = {0: "high card", 1: "pair", 2: "double pair", 3: "tripps", 4: "quint", 5: "flush", 6: "full", 7: "square", 8: "quinte flush"}
+order_jeu_invert = {"high card": 0, "pair": 1, "double pair": 2, "tripps": 3, "quint": 4, "flush": 5, "full": 6, "square": 7, "quinte flush": 8}
 
 # Definition function for the game
 
@@ -250,34 +251,39 @@ def high_card(composition):
 
 def determine_jeu(composition): 
     if quinte_flush(composition)[0] == True:
-        return quinte_flush(composition)[1]
+        return "quinte flush", quinte_flush(composition)[1]
     elif square(composition)[0] == True:
-        return square(composition)[1]
+        return "square", square(composition)[1]
     elif full(composition)[0] == True:
-        return full(composition)[1]
+        return "full", full(composition)[1]
     elif flush(composition)[0] == True:
-        return flush(composition)[1]
+        return "flush", flush(composition)[1]
     elif quint(composition)[0] == True:
-        return quint(composition)[1]
+        return "quint", quint(composition)[1]
     elif tripps(composition)[0] == True:
-        return tripps(composition)[1]
+        return "tripps", tripps(composition)[1]
     elif double_pair(composition)[0] == True:
-        return double_pair(composition)[1]
+        return "double pair", double_pair(composition)[1]
     elif pair(composition)[0] == True:
-        return pair(composition)[1]
+        return "pair", pair(composition)[1]
     elif high_card(composition)[0] == True:
-        return high_card(composition)[1]
+        return "high_card", high_card(composition)[1]
 
 def determine_best_game(players_inf_turn, displayed_card):
-    player_win = ""
     jeux_players = {}
+    meilleur_value_jeu = -1
     for position in players_inf_turn:
         if players_inf_turn[position][2] == True:
             composition = composition(players_inf_turn, displayed_card)
-            jeu = determine_jeu(composition)
-            jeux_players[players_inf_turn[position][0]] = jeu
-
-
+            jeu, compo_jeu = determine_jeu(composition)
+            jeux_players[players_inf_turn[position][0]] = [jeu, compo_jeu]
+            value_jeux = order_jeu_invert[jeu]
+            if value_jeux > meilleur_value_jeu:
+                meilleur_value_jeu = value_jeux
+    for position in players_inf_turn:
+        if players_inf_turn[position][2] == True:
+            if order_jeu_invert[jeux_players[players_inf_turn[position][0]][0]] != meilleur_value_jeu:
+                players_inf_turn[position][2] == False
     return
 
 def show_down(deck, displayed_card):
@@ -289,53 +295,53 @@ def show_down(deck, displayed_card):
 def composition(players_inf_turn, displayed_card):
     return players_inf_turn[3] + displayed_card[0] + [displayed_card[1]] + [displayed_card[2]]
 
-def preflop(players_inf_turn_fictive, deck_of_card_fictive, pot):
+def order_of_play(players_inf_turn, street="preflop"):
+    players_inf_turn_2 = {}
+    if street == "preflop":
+        for position in speak_order_preflop[-len(players_inf_turn):]:
+            players_inf_turn_2[position] = players_inf_turn[position] 
+    else:
+        for position in speak_order_postflop[len(players_inf_turn)]:
+            players_inf_turn_2[position] = players_inf_turn[position] 
+    players_inf_turn = players_inf_turn_2
+    return players_inf_turn
+   
+def new_street(players_inf_turn, pot):
     biggest_bet = pot
-    for position in players_inf_turn_fictive:
-        if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][4]) < biggest_bet:
-            temporary_decision = input("call, raise or fold")
-            if temporary_decision == "call":
-                players_inf_turn_fictive[position][3] = biggest_bet
-            elif temporary_decision == "raise":
-                biggest_bet = get_number_in_range(2*biggest_bet, players_inf_turn_fictive[position][2])
-
-            players_inf_turn_fictive[position].append(input("call or raise"), 0)
-    return
-    
-def new_street(players_inf_turn_fictive, pot_fictive):
-    biggest_bet = pot_fictive
     count_eliminated_player = 0
     action = True
-    while (count_eliminated_player != len(players_inf_turn_fictive) - 1) and (action == True):
+    while (count_eliminated_player != len(players_inf_turn) - 1) and (action == True):
         action = False
-        for position in players_inf_turn_fictive:
-            if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][5] == biggest_bet) and (players_inf_turn_fictive[position][1] > players_inf_turn_fictive[position][4]):
+        for position in order_of_play(players_inf_turn):
+            if (players_inf_turn[position][2]) and (players_inf_turn[position][5] == biggest_bet) and (players_inf_turn[position][1] > players_inf_turn[position][4]):
                 temporary_decision = input("check or raise")
                 if temporary_decision == "check":
                     action = False
                 elif temporary_decision == "raise":
                     action = True
-                    biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn_fictive[position][1])
-                    players_inf_turn_fictive[position][5] = biggest_bet
-                    pot_fictive += biggest_bet
-            if (players_inf_turn_fictive[position][2]) and (players_inf_turn_fictive[position][5] < biggest_bet) and (players_inf_turn_fictive[position][1] > players_inf_turn_fictive[position][4]):
+                    biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn[position][1])
+                    players_inf_turn[position][5] = biggest_bet
+                    pot += biggest_bet
+            if (players_inf_turn[position][2]) and (players_inf_turn[position][5] < biggest_bet) and (players_inf_turn[position][1] > players_inf_turn[position][4]):
                 temporary_decision = input("fold, call or reraise")
                 if temporary_decision == "fold":
                     count_eliminated_player += 1
-                    players_inf_turn_fictive[position][2] = False
+                    players_inf_turn[position][2] = False
                 elif temporary_decision == "call":
                     action = False
-                    if (players_inf_turn_fictive[position][1] - players_inf_turn_fictive[position][4] + players_inf_turn_fictive[position][5]) <= biggest_bet:
-                        players_inf_turn_fictive[position][5] = players_inf_turn_fictive[position][1] - players_inf_turn_fictive[position][4] 
-                        pot_fictive += players_inf_turn_fictive[position][1] - players_inf_turn_fictive[position][4] 
+                    if (players_inf_turn[position][1] - players_inf_turn[position][4] + players_inf_turn[position][5]) <= biggest_bet:
+                        players_inf_turn[position][5] = players_inf_turn[position][1] - players_inf_turn[position][4] 
+                        pot += players_inf_turn[position][1] - players_inf_turn[position][4] 
                     else:
-                        players_inf_turn_fictive[position][5] = biggest_bet
+                        players_inf_turn[position][5] = biggest_bet
                 elif temporary_decision == "reraise":
                     action = True
-                    biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn_fictive[position][1])
-                    players_inf_turn_fictive[position][5] = biggest_bet
-                    pot_fictive += biggest_bet
-    return pot_fictive
+                    biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn[position][1])
+                    players_inf_turn[position][5] = biggest_bet
+                    pot += biggest_bet
+            else:
+                count_eliminated_player += 1
+    return pot
         
 def new_hand(players_informations, game_type):
     deck = deck_creation()
@@ -353,7 +359,7 @@ def new_hand(players_informations, game_type):
         players_inf_turn["Big Blind"][-1] = players_inf_turn["Big Blind"][-1] - 1/100 * list_stack
         players_inf_turn["Small Blind"][-1] = players_inf_turn["Small Blind"][-1] - 0.5/100 * list_stack
     
-    pot += preflop()
+    pot += new_street(players_inf_turn, pot)
     update_amount_invest(players_inf_turn)
     street, state, order_show_card = state_hand(players_inf_turn)
     displayed_card = []
@@ -363,14 +369,13 @@ def new_hand(players_informations, game_type):
     
     while state == True:        
         displayed_card.append(new_tirage(street, deck))
-        pot += new_street(players_inf_turn, deck, pot)
+        pot += new_street(players_inf_turn, pot)
         update_amount_invest(players_inf_turn)
         street, state, order_show_card = state_hand(players_inf_turn)
         if order_show_card == True:
             displayed_card = show_down(players_inf_turn, deck, street, displayed_card)
             determine_best_game(players_inf_turn, displayed_card)
-    
-        update_stack(players_inf_turn, pot)
+    update_stack(players_inf_turn, pot)
 
 
 
