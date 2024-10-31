@@ -2,25 +2,33 @@
 import random
 
 # Definition basic ressources
-deck_of_cards_notfull = ["As", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King"]
-colors = ["heart", "spade", "club", "diamond"]
-deck_of_cards = []
-for color in colors:
-    for card in deck_of_cards_notfull:
-        deck_of_cards.append(card + " of " + color)
+class Card:
+    valeur_card_invert = {0:"Two", 1:"Three", 2: "Four", 3: "Five", 4: "Six", 5: "Seven", 6: "Eight", 7: "Nine", 8: "Ten", 9: "Jack", 10: "Queen", 11: "King", 12:"As"}
+    valeur_card = {"Two": 0, "Three": 1, "Four": 2, "Five": 3, "Six": 4, "Seven": 5, "Eight": 6, "Nine": 7, "Ten": 8, "Jack": 9, "Queen": 10, "King": 11, "As": 12}
+    colors = ["heart", "spade", "club", "diamond"]
+    def __init__(self, figure, color):
+        self.figure = figure
+        self.valeur = Card.valeur_card[self.figure]
+        self.color = color
+        self.name = self.figure + " of " + self.color
+    def __repr__(self):
+        pass    
 
 positions_need = {1: "Button", 2: "Small Blind", 3: "Big Blind",  4: "Cut-Off", 5: "Hijack", 6: "Under The Gun"}
 speak_order_postflop = {1: "Small Blind", 2: "Big Blind", 3: "Under The Gun", 4: "Hijack", 5: "Cut-Off", 6: "Button"}
 speak_order_preflop = {1: "Under The Gun", 2: "Hijack", 3: "Cut-Off", 4: "Button", 5: "Small Blind", 6: "Big Blind"}
 dico_street = {0: "preflop", 1: "flop", 2: "turn", 3: "river"}
-
 list_stack = {"NL2": 200, "NL5": 500, "NL10": 1000, "NL20": 20000, "NL50": 5000}
-
 order_jeu = {0: "high", 1: "pair", 2: "double pair", 3: "tripp", 4: "suit", 5: "flush", 6: "square", 7: "quinte flush"}
 
 # Definition function for the game
 
-
+def deck_creation():
+    deck_card_class = []
+    for i in range(13):
+        for j in range(4):
+            deck_card_class.append(Card(Card.valeur_card_invert[i], Card.colors[j]))
+    return deck_card_class
 
 def game_type():
     game_type = input("wich variant of texas holdem would you like to play ? You can enter NL2, NL5, NL10, NL20 or NL50")
@@ -133,10 +141,10 @@ def update_stack(players_inf_turn, pot):
             players_inf_turn[positon][5] = 0
     return
 
-def show_down(deck_of_cards_fictive, displayed_card):
+def show_down(deck, displayed_card):
     while len(displayed_card) < 3:
         street_pos = dico_street[len(displayed_card) + 1]
-        displayed_card.append(new_tirage(street_pos, deck_of_cards_fictive))
+        displayed_card.append(new_tirage(street_pos, deck))
     return displayed_card
 
 def determine_best_game(players_inf_turn, displayed_card):
@@ -144,19 +152,67 @@ def determine_best_game(players_inf_turn, displayed_card):
     jeux_players = {}
     for position in players_inf_turn:
         if players_inf_turn[position][2] == True:
-            composition = players_inf_turn[3] + displayed_card[0] + [displayed_card[1]] + [displayed_card[2]]
+            composition = composition(players_inf_turn, displayed_card)
             jeu = determine_jeu(composition)
             jeux_players[players_inf_turn[position][0]] = jeu
-    
-   
+
+
     return
 
-def separate_figure_color(composition):
-    return
+def composition(players_inf_turn, displayed_card):
+    return players_inf_turn[3] + displayed_card[0] + [displayed_card[1]] + [displayed_card[2]]
+
+def ordering(composition):
+    composition_ordered_v = []
+    composition_ordered_v_dico = {}
+    composition_ordered = composition.copy()
+    for card in composition:
+        composition_ordered_v.append(card.valeur)
+        composition_ordered_v_dico[card.valeur] = card
+    composition_ordered_v.sort()
+    for index, i in zip(composition_ordered_v, range(len(composition_ordered_v))):
+        composition_ordered[i] = composition_ordered_v_dico[index]
+    return composition_ordered 
+
+def flush(composition):
+    compo = []
+    for card in composition:
+        list_color = []
+        list_color.append(card.color)
+    for color in Card.colors:
+        count = list_color.count(color)
+        if count > 4:
+            if list_color[:2].count(color) == 0:
+                break
+            else:               
+                for card in ordering(composition):
+                    if card.color == color:
+                        compo.append(card)
+                return True, compo
+    return False, composition
+    
+def quint(composition):
+    compo = ordering(composition)
+    for i in range(2, -1, -1):
+        for j in compo[i:i+5]:
+            if Card.valeur_card[j+1] - Card.valeur_card[j] != 1:
+                break
+        if (composition[0] in compo[i:j]) or (composition[1] in compo[i:j]):          
+            return True, compo[i:j]
+    return False, composition
+
+def square(composition):
+    for card in composition:
+        if composition.count(card) == 4:
+            sett = ordering(set(composition))
+            max = 8
+            return True, [card, ]
+
 
 def determine_jeu(composition):
     # quinte flush
-    count_color
+    if flush(composition) and quint(composition):
+        high = "bla"
     return
 
 def preflop(players_inf_turn_fictive, deck_of_card_fictive, pot):
@@ -207,12 +263,13 @@ def new_street(players_inf_turn_fictive, pot_fictive):
                     pot_fictive += biggest_bet
     return pot_fictive
         
-def new_hand(players_informations, game_type, deck_of_cards_fictive=deck_of_cards.copy()):
+def new_hand(players_informations, game_type):
+    deck = deck_creation()
     players_inf_turn = {}
     pot = 1.5/100 * list_stack[game_type]
     for player in players_informations.keys():
-        tirage = random.choices(deck_of_cards_fictive, k=2)
-        deck_of_cards_fictive.remove(tirage[0], tirage[1])
+        tirage = random.choices(deck, k=2)
+        deck.remove(tirage[0], tirage[1])
         players_inf_turn[positions_need[players_informations[player][1]]] = [player, players_informations[player][0], True, tirage, 0, 0] # {position_jeu : [Name_player, starting_stack, active/out, tirage, amount_invest]}
     
     if len(players_informations) < 3:
@@ -227,16 +284,16 @@ def new_hand(players_informations, game_type, deck_of_cards_fictive=deck_of_card
     street, state, order_show_card = state_hand(players_inf_turn)
     displayed_card = []
     if order_show_card == True:
-        displayed_card = show_down(players_inf_turn, deck_of_cards_fictive, street, displayed_card)
+        displayed_card = show_down(players_inf_turn, deck, street, displayed_card)
         determine_best_game(players_inf_turn, displayed_card)
     
     while state == True:        
-        displayed_card.append(new_tirage(street, deck_of_cards_fictive))
-        pot += new_street(players_inf_turn, deck_of_cards_fictive, pot)
+        displayed_card.append(new_tirage(street, deck))
+        pot += new_street(players_inf_turn, deck, pot)
         update_amount_invest(players_inf_turn)
         street, state, order_show_card = state_hand(players_inf_turn)
         if order_show_card == True:
-            displayed_card = show_down(players_inf_turn, deck_of_cards_fictive, street, displayed_card)
+            displayed_card = show_down(players_inf_turn, deck, street, displayed_card)
             determine_best_game(players_inf_turn, displayed_card)
     
         update_stack(players_inf_turn, pot)
@@ -250,6 +307,7 @@ def lauch_game():
     
         # while party continue:
         # new_turn()
+
 
 
 
