@@ -141,26 +141,14 @@ def update_stack(players_inf_turn, pot):
             players_inf_turn[positon][5] = 0
     return
 
-def show_down(deck, displayed_card):
-    while len(displayed_card) < 3:
-        street_pos = dico_street[len(displayed_card) + 1]
-        displayed_card.append(new_tirage(street_pos, deck))
-    return displayed_card
-
-def determine_best_game(players_inf_turn, displayed_card):
-    player_win = ""
-    jeux_players = {}
-    for position in players_inf_turn:
-        if players_inf_turn[position][2] == True:
-            composition = composition(players_inf_turn, displayed_card)
-            jeu = determine_jeu(composition)
-            jeux_players[players_inf_turn[position][0]] = jeu
-
-
-    return
-
-def composition(players_inf_turn, displayed_card):
-    return players_inf_turn[3] + displayed_card[0] + [displayed_card[1]] + [displayed_card[2]]
+def find_higher_card_pair_tripps_square_except(composition, card):
+    sett = ordering(set(composition)).reverse()
+    if sett[0] != card:
+        higher_card = sett[0]
+    else: 
+        higher_card = sett[1]
+    return higher_card
+    
 
 def ordering(composition):
     composition_ordered_v = []
@@ -185,7 +173,7 @@ def flush(composition):
             if list_color[:2].count(color) == 0:
                 break
             else:               
-                for card in ordering(composition):
+                for card in ordering(composition).reverse():
                     if card.color == color:
                         compo.append(card)
                 return True, compo
@@ -204,16 +192,102 @@ def quint(composition):
 def square(composition):
     for card in composition:
         if composition.count(card) == 4:
-            sett = ordering(set(composition))
-            max = 8
-            return True, [card, ]
+            high_card = find_higher_card_pair_tripps_square_except(composition, card)
+            return True, [card, card, card, card, high_card]
+    return False, composition
+
+def tripps(composition):
+    compo = ordering(composition).reverse()
+    for card in compo:
+        if compo.count(card) == 3:
+            high_card = find_higher_card_pair_tripps_square_except(composition, card)
+            return True, [card, card, card, high_card]
+    return False, composition
+
+def double_pair(composition):
+    compo = ordering(composition).reverse()
+    jeu = []
+    for card in compo:
+        if compo.count(card) == 2 and (card not in jeu):
+            jeu.append(card)
+            jeu.append(card)
+            if len(jeu) == 4:
+                high_card = find_higher_card_pair_tripps_square_except(composition, card)
+                jeu.append(high_card)
+                return True, jeu
+    return False, composition
+        
+def pair(composition):
+    compo = ordering(composition).reverse()
+    for card in compo:
+        if compo.count(card) == 2:
+            high_card = find_higher_card_pair_tripps_square_except(composition, card)
+            compo.remove(high_card)
+            high_card_2 = find_higher_card_pair_tripps_square_except(compo, card)
+            compo.remove(high_card_2)
+            high_card_3 = find_higher_card_pair_tripps_square_except(compo, card)
+            return True, [card, card, high_card, high_card_2, high_card_3]
+    return False, composition      
+
+def full(composition):
+    tripps, tripps_compo = tripps(composition)
+    pair, pair_compo = pair(composition)
+    if (tripps == True) and (pair == True):
+        compo_full = tripps_compo[:3] + pair_compo[:2]
+        return True, compo_full
+    return False, composition
+
+def quinte_flush(composition):
+    quint, quint_compo = quint(composition)
+    flush, flush_compo = flush(composition)
+    if (quint == True) and (flush == True) and (flush_compo == quint_compo.reverse):
+        return True, flush_compo
+    return False, composition
+
+def high_card(composition):
+        jeu = ordering(composition).reverse()
+        return True, jeu
+
+def determine_jeu(composition): 
+    if quinte_flush(composition)[0] == True:
+        return quinte_flush(composition)[1]
+    elif square(composition)[0] == True:
+        return square(composition)[1]
+    elif full(composition)[0] == True:
+        return full(composition)[1]
+    elif flush(composition)[0] == True:
+        return flush(composition)[1]
+    elif quint(composition)[0] == True:
+        return quint(composition)[1]
+    elif tripps(composition)[0] == True:
+        return tripps(composition)[1]
+    elif double_pair(composition)[0] == True:
+        return double_pair(composition)[1]
+    elif pair(composition)[0] == True:
+        return pair(composition)[1]
+    elif high_card(composition)[0] == True:
+        return high_card(composition)[1]
+
+def determine_best_game(players_inf_turn, displayed_card):
+    player_win = ""
+    jeux_players = {}
+    for position in players_inf_turn:
+        if players_inf_turn[position][2] == True:
+            composition = composition(players_inf_turn, displayed_card)
+            jeu = determine_jeu(composition)
+            jeux_players[players_inf_turn[position][0]] = jeu
 
 
-def determine_jeu(composition):
-    # quinte flush
-    if flush(composition) and quint(composition):
-        high = "bla"
     return
+
+def show_down(deck, displayed_card):
+    while len(displayed_card) < 3:
+        street_pos = dico_street[len(displayed_card) + 1]
+        displayed_card.append(new_tirage(street_pos, deck))
+    return displayed_card
+
+def composition(players_inf_turn, displayed_card):
+    return players_inf_turn[3] + displayed_card[0] + [displayed_card[1]] + [displayed_card[2]]
 
 def preflop(players_inf_turn_fictive, deck_of_card_fictive, pot):
     biggest_bet = pot
@@ -307,7 +381,6 @@ def lauch_game():
     
         # while party continue:
         # new_turn()
-
 
 
 
