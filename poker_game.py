@@ -44,11 +44,34 @@ def add_player():
             list_players.append(player)
     return list_players
 
-def activate_player(players_inf_turn):
-    for positon in players_inf_turn:
-        if players_inf_turn[positon][1] > 0:
-            players_inf_turn[positon][2] = True
-    return
+def activate_player(players_informations, game_type):
+    player_out = {}
+    for player in players_informations:
+        motivation = input("if you want to play, enter \"yes\", otherwise, enter \"no\"")
+        if motivation == "no":
+            decision = input("if you want to leave the table, enter \"leave\", otherwise, enter \"stay\"")
+            if decision == "leave":
+                player_out = players_informations.pop(player)
+            else:
+                players_informations[player][2] = False
+        elif (motivation == "yes") and (players_informations[player][1] == 0):
+            restack = resatck(10/100 * list_stack[game_type], list_stack[game_type])
+            players_informations[player][3] += restack
+            players_informations[player][1] = restack
+        elif (players_informations[player][1] > 0) and (motivation == "yes"): 
+            players_informations[player][2] = True
+    return players_informations, player_out
+
+def resatck(min_val, max_val):
+    while True:
+        try:
+            number = int(input(f"How much do you want to add. The amount must be between {min_val} and {max_val}!"))
+            if min_val <= number <= max_val:
+                return number
+            else:
+                print(f"The amount must be between {min_val} and {max_val}!")
+        except ValueError:
+            print("Please enter a valid integer!")
 
 def get_number_in_range(min_val, max_val):
     while True:
@@ -62,7 +85,7 @@ def get_number_in_range(min_val, max_val):
             print("Please enter a valid integer!")
 
 def initialize_players_information(list_players):
-    players_informations = {player:[starting_stack, pos] for player, starting_stack, pos in zip(list_players, list_stack, random.sample(1, range(len(list_players) + 1)))} 
+    players_informations = {player:[starting_stack, pos, True, starting_stack] for player, starting_stack, pos in zip(list_players, list_stack, random.sample(1, range(len(list_players) + 1)))} # {player : stack, position, state, gain}
     return players_informations
 
 def change_players_position(players_informations):
@@ -91,18 +114,18 @@ def new_tirage(street, deck):
         return new_tirage
 
 def update_amount_invest(players_inf_turn):
-    for position in players_inf_turn:
-        players_inf_turn[position][4] += players_inf_turn[position][5]
-        players_inf_turn[position][5] = 0
+    for player in players_inf_turn:
+        players_inf_turn[player][4] += players_inf_turn[player][5]
+        players_inf_turn[player][5] = 0
     return players_inf_turn
     
 def state_hand(players_inf_turn, street="preflop"):
     count = 0
     count_all_in = 0
-    for position in players_inf_turn:
-        if players_inf_turn[position][2] == True:
+    for player in players_inf_turn:
+        if players_inf_turn[player][2] == True:
             count += 1
-        if round(players_inf_turn[position][1] - players_inf_turn[position][2]) == 0:
+        if round(players_inf_turn[player][1] - players_inf_turn[player][2]) == 0:
             count_all_in += 1 
     if count - count_all_in == 1:
         street = "river"
@@ -131,15 +154,15 @@ def state_hand(players_inf_turn, street="preflop"):
         return street, state, order_show_card
 
 def update_stack(players_inf_turn, pot):
-    for positon in players_inf_turn:
-        if players_inf_turn[positon][2] == True:
-            players_inf_turn[positon][1] += pot - players_inf_turn[positon][4]
-            players_inf_turn[positon][4] = 0
-            players_inf_turn[positon][5] = 0
-        elif players_inf_turn[positon][2] == False:
-            players_inf_turn[positon][1] -= players_inf_turn[positon][4]
-            players_inf_turn[positon][4] = 0
-            players_inf_turn[positon][5] = 0
+    for player in players_inf_turn:
+        if players_inf_turn[player][2] == True:
+            players_inf_turn[player][1] += pot - players_inf_turn[player][4]
+            players_inf_turn[player][4] = 0
+            players_inf_turn[player][5] = 0
+        elif players_inf_turn[player][2] == False:
+            players_inf_turn[player][1] -= players_inf_turn[player][4]
+            players_inf_turn[player][4] = 0
+            players_inf_turn[player][5] = 0
     return
 
 def find_higher_card_pair_tripps_square_except(composition, card):
@@ -272,18 +295,18 @@ def determine_jeu(composition):
 def determine_best_game(players_inf_turn, displayed_card):
     jeux_players = {}
     meilleur_value_jeu = -1
-    for position in players_inf_turn:
-        if players_inf_turn[position][2] == True:
+    for player in players_inf_turn:
+        if players_inf_turn[player][2] == True:
             composition = composition(players_inf_turn, displayed_card)
             jeu, compo_jeu = determine_jeu(composition)
-            jeux_players[players_inf_turn[position][0]] = [jeu, compo_jeu]
+            jeux_players[players_inf_turn[player][0]] = [jeu, compo_jeu]
             value_jeux = order_jeu_invert[jeu]
             if value_jeux > meilleur_value_jeu:
                 meilleur_value_jeu = value_jeux
-    for position in players_inf_turn:
-        if players_inf_turn[position][2] == True:
-            if order_jeu_invert[jeux_players[players_inf_turn[position][0]][0]] != meilleur_value_jeu:
-                players_inf_turn[position][2] == False
+    for player in players_inf_turn:
+        if players_inf_turn[player][2] == True:
+            if order_jeu_invert[jeux_players[players_inf_turn[player][0]][0]] != meilleur_value_jeu:
+                players_inf_turn[player][2] == False
     return
 
 def show_down(deck, displayed_card):
@@ -312,32 +335,32 @@ def new_street(players_inf_turn, pot):
     action = True
     while (count_eliminated_player != len(players_inf_turn) - 1) and (action == True):
         action = False
-        for position in order_of_play(players_inf_turn):
-            if (players_inf_turn[position][2]) and (players_inf_turn[position][5] == biggest_bet) and (players_inf_turn[position][1] > players_inf_turn[position][4]):
+        for player in order_of_play(players_inf_turn):
+            if (players_inf_turn[player][2]) and (players_inf_turn[player][5] == biggest_bet) and (players_inf_turn[player][1] > players_inf_turn[player][4]):
                 temporary_decision = input("check or raise")
                 if temporary_decision == "check":
                     action = False
                 elif temporary_decision == "raise":
                     action = True
-                    biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn[position][1])
-                    players_inf_turn[position][5] = biggest_bet
+                    biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn[player][1])
+                    players_inf_turn[player][5] = biggest_bet
                     pot += biggest_bet
-            if (players_inf_turn[position][2]) and (players_inf_turn[position][5] < biggest_bet) and (players_inf_turn[position][1] > players_inf_turn[position][4]):
+            if (players_inf_turn[player][2]) and (players_inf_turn[player][5] < biggest_bet) and (players_inf_turn[player][1] > players_inf_turn[player][4]):
                 temporary_decision = input("fold, call or reraise")
                 if temporary_decision == "fold":
                     count_eliminated_player += 1
-                    players_inf_turn[position][2] = False
+                    players_inf_turn[player][2] = False
                 elif temporary_decision == "call":
                     action = False
-                    if (players_inf_turn[position][1] - players_inf_turn[position][4] + players_inf_turn[position][5]) <= biggest_bet:
-                        players_inf_turn[position][5] = players_inf_turn[position][1] - players_inf_turn[position][4] 
-                        pot += players_inf_turn[position][1] - players_inf_turn[position][4] 
+                    if (players_inf_turn[player][1] - players_inf_turn[player][4] + players_inf_turn[player][5]) <= biggest_bet:
+                        players_inf_turn[player][5] = players_inf_turn[player][1] - players_inf_turn[player][4] 
+                        pot += players_inf_turn[player][1] - players_inf_turn[player][4] 
                     else:
-                        players_inf_turn[position][5] = biggest_bet
+                        players_inf_turn[player][5] = biggest_bet
                 elif temporary_decision == "reraise":
                     action = True
-                    biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn[position][1])
-                    players_inf_turn[position][5] = biggest_bet
+                    biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn[player][1])
+                    players_inf_turn[player][5] = biggest_bet
                     pot += biggest_bet
             else:
                 count_eliminated_player += 1
@@ -364,8 +387,7 @@ def new_hand(players_informations, game_type):
     for player in players_informations.keys():
         tirage = random.choices(deck, k=2)
         deck.remove(tirage[0], tirage[1])
-        players_inf_turn[positions_need[players_informations[player][1]]] = [player, players_informations[player][0], True, tirage, 0, 0] # {position_jeu : [Name_player, stack, active/out, tirage, amount_invest]}
-    
+        players_inf_turn[player] = [positions_need[players_informations[player][1]], players_informations[player][0], True, tirage, 0, 0] # {Name_player : [position_jeu, stack, active/out, tirage, amount_invest, invest_street]}
     blindes(players_inf_turn, game_type)
     pot += new_street(players_inf_turn, pot)
     update_amount_invest(players_inf_turn)
@@ -374,7 +396,6 @@ def new_hand(players_informations, game_type):
     if order_show_card == True:
         displayed_card = show_down(players_inf_turn, deck, street, displayed_card)
         determine_best_game(players_inf_turn, displayed_card)
-    
     while state == True:        
         displayed_card.append(new_tirage(street, deck))
         pot += new_street(players_inf_turn, pot)
@@ -384,21 +405,37 @@ def new_hand(players_informations, game_type):
             displayed_card = show_down(players_inf_turn, deck, street, displayed_card)
             determine_best_game(players_inf_turn, displayed_card)
     update_stack(players_inf_turn, pot)
-    
     for player in players_informations.keys():
         players_informations[player][1] = players_inf_turn[player][1]
-    return 
+    return players_informations
 
-
-
-
+def state_players(players_informations):
+    state_players = []
+    for player in players_informations:
+        state_players.append(players_informations[player][2])
+    return state_players
 
 def lauch_game():
     game_type = game_type()
     list_players = add_player()
-    
-        # while party continue:
-        # new_turn()
+    players_informations = initialize_players_information(list_players)
+    state_players = state_players(players_informations)
+    while state_players.count(True) > 1:
+        players_informations = new_hand(players_informations) 
+        players_informations, player_out = activate_player(players_informations)
+        if player_out != {}:
+            for player in player_out:
+                gain = player_out[player][0] - player_out[player][3]
+                print(f"{player} leave the table. {player} gain are {gain}.")
+        state_players = state_players(players_informations)
+        players_informations = change_players_position(players_informations)
+    print("the game ended !")
 
+    
+
+        
+
+
+         
 
 
