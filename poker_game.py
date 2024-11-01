@@ -343,6 +343,20 @@ def new_street(players_inf_turn, pot):
                 count_eliminated_player += 1
     return pot
         
+def blindes(players_inf_turn, game_type):
+    if len(players_inf_turn) < 3:
+        for player in players_inf_turn:
+            if players_inf_turn[player][0] == "Button":
+                players_inf_turn[player][4] += 1/100 * list_stack[game_type]
+            elif players_inf_turn[player][0] == "Small Blind":
+                players_inf_turn[player][4] += 0.5/100 * list_stack[game_type]
+    else:
+        for player in players_inf_turn:
+            if players_inf_turn[player][0] == "Small Blind":
+                players_inf_turn[player][4] += 0.5/100 * list_stack[game_type]
+            elif players_inf_turn[player][0] == "Big Blind":
+                players_inf_turn[player][4] += 1/100 * list_stack[game_type]
+
 def new_hand(players_informations, game_type):
     deck = deck_creation()
     players_inf_turn = {}
@@ -350,15 +364,9 @@ def new_hand(players_informations, game_type):
     for player in players_informations.keys():
         tirage = random.choices(deck, k=2)
         deck.remove(tirage[0], tirage[1])
-        players_inf_turn[positions_need[players_informations[player][1]]] = [player, players_informations[player][0], True, tirage, 0, 0] # {position_jeu : [Name_player, starting_stack, active/out, tirage, amount_invest]}
+        players_inf_turn[positions_need[players_informations[player][1]]] = [player, players_informations[player][0], True, tirage, 0, 0] # {position_jeu : [Name_player, stack, active/out, tirage, amount_invest]}
     
-    if len(players_informations) < 3:
-        players_inf_turn["Button"][-1] = players_inf_turn["Button"][-1] - 1/100 * list_stack
-        players_inf_turn["Small Blind"][-1] = players_inf_turn["Small Blind"][-1] - 0.5/100 * list_stack
-    else:
-        players_inf_turn["Big Blind"][-1] = players_inf_turn["Big Blind"][-1] - 1/100 * list_stack
-        players_inf_turn["Small Blind"][-1] = players_inf_turn["Small Blind"][-1] - 0.5/100 * list_stack
-    
+    blindes(players_inf_turn, game_type)
     pot += new_street(players_inf_turn, pot)
     update_amount_invest(players_inf_turn)
     street, state, order_show_card = state_hand(players_inf_turn)
@@ -376,6 +384,11 @@ def new_hand(players_informations, game_type):
             displayed_card = show_down(players_inf_turn, deck, street, displayed_card)
             determine_best_game(players_inf_turn, displayed_card)
     update_stack(players_inf_turn, pot)
+    
+    for player in players_informations.keys():
+        players_informations[player][1] = players_inf_turn[player][1]
+    return 
+
 
 
 
