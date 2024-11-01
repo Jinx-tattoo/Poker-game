@@ -14,7 +14,7 @@ class Card:
     def __repr__(self):
         pass    
 
-positions_need = {1: "Button", 2: "Small Blind", 3: "Big Blind",  4: "Cut-Off", 5: "Hijack", 6: "Under The Gun"}
+positions_need = {1: "Big Blind", 2: "Small Blind", 3: "Button",  4: "Cut-Off", 5: "Hijack", 6: "Under The Gun"}
 speak_order_postflop = {2: ["Small Blind", "Big Blind"], 3: ["Small Blind", "Big Blind", "Button"], 4: ["Small Blind", "Big Blind", "Cut-Off","Button"], 5: ["Small Blind", "Big Blind", "Hijack", "Cut-Off","Button"], 6: ["Small Blind", "Big Blind", "Under The Gun", "Hijack", "Cut-Off","Button"]}
 speak_order_preflop= ["Under The Gun", "Hijack", "Cut-Off", "Button", "Small Blind", "Big Blind"]
 dico_street = {0: "preflop", 1: "flop", 2: "turn", 3: "river"}
@@ -31,17 +31,20 @@ def deck_creation():
             deck_card_class.append(Card(Card.valeur_card_invert[i], Card.colors[j]))
     return deck_card_class
 
-def game_type():
-    game_type = input("wich variant of texas holdem would you like to play ? You can enter NL2, NL5, NL10, NL20 or NL50")
+def function_game_type():
+    game_type = str(input("wich variant of texas holdem would you like to play ? You can enter NL2, NL5, NL10, NL20 or NL50 : "))
     return game_type
 
 def add_player():
     list_players = []
     player = ""
-    while (player != "ok") and (len(list_players) <= 6) and (len(list_players) >= 2):
-        player = input("enter player\'s name to add a new player or \'ok\' to continue")
+    while (player != "ok") and (len(list_players) <= 6):
+        player = input("enter player\'s name to add a new player or \'ok\' to continue : ")
         if player != "ok":
             list_players.append(player)
+        elif (player == "ok") and (len(list_players) < 2):
+            print("There is not enough player !")
+            player = ""
     return list_players
 
 def activate_player(players_informations, game_type):
@@ -84,8 +87,8 @@ def get_number_in_range(min_val, max_val):
         except ValueError:
             print("Please enter a valid integer!")
 
-def initialize_players_information(list_players):
-    players_informations = {player:[starting_stack, pos, True, starting_stack] for player, starting_stack, pos in zip(list_players, list_stack, random.sample(1, range(len(list_players) + 1)))} # {player : stack, position, state, gain}
+def initialize_players_information(list_players, game_type):
+    players_informations = {player:[list_stack[game_type], pos, True, list_stack[game_type]] for player, pos in zip(list_players, random.sample(range(1, len(list_players) + 1), k=len(list_players)))} # {player : stack, position, state, gain}
     return players_informations
 
 def change_players_position(players_informations):
@@ -99,18 +102,20 @@ def change_players_position(players_informations):
 def new_tirage(street, deck):
     if street == "flop":
         new_tirage = random.choices(deck, k=3)
-        deck.remove(new_tirage[0], new_tirage[1], new_tirage[2])
-        print(f"flop : {new_tirage[0]}  {new_tirage[1]}  {new_tirage[2]}")
+        deck.remove(new_tirage[0])
+        deck.remove(new_tirage[1])
+        deck.remove(new_tirage[2])
+        print(f"flop : {new_tirage[0].name}  {new_tirage[1].name}  {new_tirage[2].name}")
         return new_tirage
     elif street == "turn":
         new_tirage = random.choices(deck, k=1)
         deck.remove(new_tirage[0])
-        print(f"turn : {new_tirage[0]}")
+        print(f"turn : {new_tirage[0].name}")
         return new_tirage
     elif street == "river":
         new_tirage = random.choices(deck, k=1)
         deck.remove(new_tirage[0])
-        print(f"river : {new_tirage[0]}")
+        print(f"river : {new_tirage[0].name}")
         return new_tirage
 
 def update_amount_invest(players_inf_turn):
@@ -206,12 +211,13 @@ def flush(composition):
 def quint(composition):
     compo = ordering(composition)
     for i in range(2, -1, -1):
-        for j in compo[i:i+5]:
-            if Card.valeur_card[j+1] - Card.valeur_card[j] != 1:
-                break
-        if (composition[0] in compo[i:j]) or (composition[1] in compo[i:j]):          
-            return True, compo[i:j]
-    return False, composition
+        for j in compo[i:i+4]:
+            if Card.valeur_card[compo[i+1].figure] - Card.valeur_card[compo[i].figure] != 1:           
+                continue
+            else:
+                return False, composition
+        return True, compo[i:i+5]
+    
 
 def square(composition):
     for card in composition:
@@ -254,17 +260,17 @@ def pair(composition):
     return False, composition      
 
 def full(composition):
-    tripps, tripps_compo = tripps(composition)
-    pair, pair_compo = pair(composition)
-    if (tripps == True) and (pair == True):
+    variable_tripps, tripps_compo = tripps(composition)
+    variable_pair, pair_compo = pair(composition)
+    if (variable_tripps == True) and (variable_pair == True):
         compo_full = tripps_compo[:3] + pair_compo[:2]
         return True, compo_full
     return False, composition
 
 def quinte_flush(composition):
-    quint, quint_compo = quint(composition)
-    flush, flush_compo = flush(composition)
-    if (quint == True) and (flush == True) and (flush_compo == quint_compo.reverse):
+    variable_quint, quint_compo = quint(composition)
+    variable_flush, flush_compo = flush(composition)
+    if (variable_quint == True) and (variable_flush == True) and (flush_compo == quint_compo.reverse):
         return True, flush_compo
     return False, composition
 
@@ -297,7 +303,7 @@ def determine_best_game(players_inf_turn, displayed_card):
     meilleur_value_jeu = -1
     for player in players_inf_turn:
         if players_inf_turn[player][2] == True:
-            composition = composition(players_inf_turn, displayed_card)
+            composition = function_composition(players_inf_turn[player], displayed_card)
             jeu, compo_jeu = determine_jeu(composition)
             jeux_players[players_inf_turn[player][0]] = [jeu, compo_jeu]
             value_jeux = order_jeu_invert[jeu]
@@ -315,29 +321,43 @@ def show_down(deck, displayed_card):
         displayed_card.append(new_tirage(street_pos, deck))
     return displayed_card
 
-def composition(players_inf_turn, displayed_card):
-    return players_inf_turn[3] + displayed_card[0] + [displayed_card[1]] + [displayed_card[2]]
-
+def function_composition(info_player, displayed_card):
+    return info_player[3] + displayed_card[0] + displayed_card[1] + displayed_card[2]
+  
 def order_of_play(players_inf_turn, street="preflop"):
     players_inf_turn_2 = {}
     if street == "preflop":
         for position in speak_order_preflop[-len(players_inf_turn):]:
-            players_inf_turn_2[position] = players_inf_turn[position] 
+            for player in players_inf_turn:
+                if position in players_inf_turn[player][0]:
+                    players_inf_turn_2[player] = players_inf_turn[player]
+                    break
     else:
         for position in speak_order_postflop[len(players_inf_turn)]:
-            players_inf_turn_2[position] = players_inf_turn[position] 
-    players_inf_turn = players_inf_turn_2
+            for player in players_inf_turn:
+                if position in players_inf_turn[player][0]:
+                    players_inf_turn_2[player] = players_inf_turn[player]
+                    break      
+    players_inf_turn = players_inf_turn_2.copy()
+    print(len(players_inf_turn))
     return players_inf_turn
-   
-def new_street(players_inf_turn, pot):
-    biggest_bet = pot
+
+def function_biggest_bet(street, game_type):
+    if street == "preflop":
+        biggest_bet = 1/100 * list_stack[game_type]
+    else: 
+        biggest_bet = 0
+    return biggest_bet
+
+def new_street(players_inf_turn, pot, game_type, street="preflop"):
+    biggest_bet = function_biggest_bet(street, game_type)
     count_eliminated_player = 0
     action = True
     while (count_eliminated_player != len(players_inf_turn) - 1) and (action == True):
         action = False
         for player in order_of_play(players_inf_turn):
             if (players_inf_turn[player][2]) and (players_inf_turn[player][5] == biggest_bet) and (players_inf_turn[player][1] > players_inf_turn[player][4]):
-                temporary_decision = input("check or raise")
+                temporary_decision = input(f"This is the turn of {player}." + "\n" + f"The pot contain {pot}. The biggest bet is {biggest_bet}. The current mise of {player} is {players_inf_turn[player][5]}." + "\n" + f"Possible action are check or raise : ")
                 if temporary_decision == "check":
                     action = False
                 elif temporary_decision == "raise":
@@ -346,17 +366,20 @@ def new_street(players_inf_turn, pot):
                     players_inf_turn[player][5] = biggest_bet
                     pot += biggest_bet
             if (players_inf_turn[player][2]) and (players_inf_turn[player][5] < biggest_bet) and (players_inf_turn[player][1] > players_inf_turn[player][4]):
-                temporary_decision = input("fold, call or reraise")
+                temporary_decision = input(f"This is the turn of {player}." + "\n" + f"The pot contain {pot}. The biggest bet is {biggest_bet}. The current mise of {player} is {players_inf_turn[player][5]}." + "\n" + f"Possible action are fold, call or reraise : ")
                 if temporary_decision == "fold":
                     count_eliminated_player += 1
                     players_inf_turn[player][2] = False
                 elif temporary_decision == "call":
                     action = False
-                    if (players_inf_turn[player][1] - players_inf_turn[player][4] + players_inf_turn[player][5]) <= biggest_bet:
-                        players_inf_turn[player][5] = players_inf_turn[player][1] - players_inf_turn[player][4] 
-                        pot += players_inf_turn[player][1] - players_inf_turn[player][4] 
+                    if (players_inf_turn[player][1] - players_inf_turn[player][4] + players_inf_turn[player][5]) <= biggest_bet: 
+                        pot += players_inf_turn[player][1] - players_inf_turn[player][4] - players_inf_turn[player][5]
+                        print(f"{player} call for {players_inf_turn[player][5]}." + "\n" + f"the pot is now {pot}.\n")
+                        players_inf_turn[player][5] = players_inf_turn[player][1] - players_inf_turn[player][4]
                     else:
-                        players_inf_turn[player][5] = biggest_bet
+                        pot += biggest_bet - players_inf_turn[player][5]
+                        print(f"{player} call for {biggest_bet - players_inf_turn[player][5]}." + "\n" + f"the pot is now {pot}.\n")
+                        players_inf_turn[player][5] = biggest_bet 
                 elif temporary_decision == "reraise":
                     action = True
                     biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn[player][1])
@@ -367,18 +390,18 @@ def new_street(players_inf_turn, pot):
     return pot
         
 def blindes(players_inf_turn, game_type):
-    if len(players_inf_turn) < 3:
-        for player in players_inf_turn:
-            if players_inf_turn[player][0] == "Button":
-                players_inf_turn[player][4] += 1/100 * list_stack[game_type]
-            elif players_inf_turn[player][0] == "Small Blind":
-                players_inf_turn[player][4] += 0.5/100 * list_stack[game_type]
-    else:
+    # if len(players_inf_turn) < 3:
+    #     for player in players_inf_turn:
+    #         if players_inf_turn[player][0] == "Button":
+    #             players_inf_turn[player][4] += 1/100 * list_stack[game_type]
+    #         elif players_inf_turn[player][0] == "Small Blind":
+    #             players_inf_turn[player][4] += 0.5/100 * list_stack[game_type]
+    # else:
         for player in players_inf_turn:
             if players_inf_turn[player][0] == "Small Blind":
-                players_inf_turn[player][4] += 0.5/100 * list_stack[game_type]
+                players_inf_turn[player][5] += 0.5/100 * list_stack[game_type]
             elif players_inf_turn[player][0] == "Big Blind":
-                players_inf_turn[player][4] += 1/100 * list_stack[game_type]
+                players_inf_turn[player][5] += 1/100 * list_stack[game_type]
 
 def new_hand(players_informations, game_type):
     deck = deck_creation()
@@ -386,54 +409,57 @@ def new_hand(players_informations, game_type):
     pot = 1.5/100 * list_stack[game_type]
     for player in players_informations.keys():
         tirage = random.choices(deck, k=2)
-        deck.remove(tirage[0], tirage[1])
+        deck.remove(tirage[0])
+        deck.remove(tirage[1])
         players_inf_turn[player] = [positions_need[players_informations[player][1]], players_informations[player][0], True, tirage, 0, 0] # {Name_player : [position_jeu, stack, active/out, tirage, amount_invest, invest_street]}
     blindes(players_inf_turn, game_type)
-    pot += new_street(players_inf_turn, pot)
+    pot += new_street(players_inf_turn, pot, game_type)
     update_amount_invest(players_inf_turn)
     street, state, order_show_card = state_hand(players_inf_turn)
     displayed_card = []
     if order_show_card == True:
-        displayed_card = show_down(players_inf_turn, deck, street, displayed_card)
+        displayed_card = show_down(deck, displayed_card)
         determine_best_game(players_inf_turn, displayed_card)
     while state == True:        
         displayed_card.append(new_tirage(street, deck))
-        pot += new_street(players_inf_turn, pot)
+        pot += new_street(players_inf_turn, pot, game_type, street)
         update_amount_invest(players_inf_turn)
-        street, state, order_show_card = state_hand(players_inf_turn)
+        street, state, order_show_card = state_hand(players_inf_turn, street)
         if order_show_card == True:
-            displayed_card = show_down(players_inf_turn, deck, street, displayed_card)
+            displayed_card = show_down(deck, displayed_card)
             determine_best_game(players_inf_turn, displayed_card)
     update_stack(players_inf_turn, pot)
     for player in players_informations.keys():
         players_informations[player][1] = players_inf_turn[player][1]
     return players_informations
 
-def state_players(players_informations):
+def function_state_players(players_informations):
     state_players = []
     for player in players_informations:
         state_players.append(players_informations[player][2])
     return state_players
 
 def lauch_game():
-    game_type = game_type()
+    count = 0
+    game_type = function_game_type()
     list_players = add_player()
-    players_informations = initialize_players_information(list_players)
-    state_players = state_players(players_informations)
+    players_informations = initialize_players_information(list_players, game_type)
+    state_players = function_state_players(players_informations)
     while state_players.count(True) > 1:
-        players_informations = new_hand(players_informations) 
+        players_informations = new_hand(players_informations, game_type)
+        count +=1 
+        print(count) 
         players_informations, player_out = activate_player(players_informations)
         if player_out != {}:
             for player in player_out:
                 gain = player_out[player][0] - player_out[player][3]
                 print(f"{player} leave the table. {player} gain are {gain}.")
-        state_players = state_players(players_informations)
+        state_players = function_state_players(players_informations)
         players_informations = change_players_position(players_informations)
     print("the game ended !")
 
-    
+lauch_game()  
 
-        
 
 
          
