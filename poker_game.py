@@ -31,17 +31,20 @@ def deck_creation():
             deck_card_class.append(Card(Card.valeur_card_invert[i], Card.colors[j]))
     return deck_card_class
 
-def game_type():
-    game_type = input("wich variant of texas holdem would you like to play ? You can enter NL2, NL5, NL10, NL20 or NL50")
+def function_game_type():
+    game_type = str(input("wich variant of texas holdem would you like to play ? You can enter NL2, NL5, NL10, NL20 or NL50 : "))
     return game_type
 
 def add_player():
     list_players = []
     player = ""
-    while (player != "ok") and (len(list_players) <= 6) and (len(list_players) >= 2):
-        player = input("enter player\'s name to add a new player or \'ok\' to continue")
+    while (player != "ok") and (len(list_players) <= 6):
+        player = input("enter player\'s name to add a new player or \'ok\' to continue : ")
         if player != "ok":
             list_players.append(player)
+        elif (player == "ok") and (len(list_players) < 2):
+            print("There is not enough player !")
+            player = ""
     return list_players
 
 def activate_player(players_informations, game_type):
@@ -84,8 +87,8 @@ def get_number_in_range(min_val, max_val):
         except ValueError:
             print("Please enter a valid integer!")
 
-def initialize_players_information(list_players):
-    players_informations = {player:[starting_stack, pos, True, starting_stack] for player, starting_stack, pos in zip(list_players, list_stack, random.sample(1, range(len(list_players) + 1)))} # {player : stack, position, state, gain}
+def initialize_players_information(list_players, game_type):
+    players_informations = {player:[list_stack[game_type], pos, True, list_stack[game_type]] for player, pos in zip(list_players, random.sample(range(1, len(list_players) + 1), k=len(list_players)))} # {player : stack, position, state, gain}
     return players_informations
 
 def change_players_position(players_informations):
@@ -386,7 +389,8 @@ def new_hand(players_informations, game_type):
     pot = 1.5/100 * list_stack[game_type]
     for player in players_informations.keys():
         tirage = random.choices(deck, k=2)
-        deck.remove(tirage[0], tirage[1])
+        deck.remove(tirage[0])
+        deck.remove(tirage[1])
         players_inf_turn[player] = [positions_need[players_informations[player][1]], players_informations[player][0], True, tirage, 0, 0] # {Name_player : [position_jeu, stack, active/out, tirage, amount_invest, invest_street]}
     blindes(players_inf_turn, game_type)
     pot += new_street(players_inf_turn, pot)
@@ -409,31 +413,30 @@ def new_hand(players_informations, game_type):
         players_informations[player][1] = players_inf_turn[player][1]
     return players_informations
 
-def state_players(players_informations):
+def function_state_players(players_informations):
     state_players = []
     for player in players_informations:
         state_players.append(players_informations[player][2])
     return state_players
 
 def lauch_game():
-    game_type = game_type()
+    game_type = function_game_type()
     list_players = add_player()
-    players_informations = initialize_players_information(list_players)
-    state_players = state_players(players_informations)
+    players_informations = initialize_players_information(list_players, game_type)
+    state_players = function_state_players(players_informations)
     while state_players.count(True) > 1:
-        players_informations = new_hand(players_informations) 
+        players_informations = new_hand(players_informations, game_type) 
         players_informations, player_out = activate_player(players_informations)
         if player_out != {}:
             for player in player_out:
                 gain = player_out[player][0] - player_out[player][3]
                 print(f"{player} leave the table. {player} gain are {gain}.")
-        state_players = state_players(players_informations)
+        state_players = function_state_players(players_informations)
         players_informations = change_players_position(players_informations)
     print("the game ended !")
 
-    
+lauch_game()  
 
-        
 
 
          
