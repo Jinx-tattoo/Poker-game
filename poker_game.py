@@ -254,7 +254,7 @@ def pair(composition):
     compo = ordering(composition)[1]
     for card in compo:
         if compo.count(card) == 2:
-            high_card = find_higher_card_pair_tripps_square_except(composition, card)
+            high_card = find_higher_card_pair_tripps_square_except(compo, card)
             compo.remove(high_card)
             high_card_2 = find_higher_card_pair_tripps_square_except(compo, card)
             compo.remove(high_card_2)
@@ -310,13 +310,13 @@ def determine_best_game(players_inf_turn, displayed_card):
             jeu, compo_jeu = determine_jeu(composition)
             # jeux_players[players_inf_turn[player][0]] = [jeu, compo_jeu]
             jeux_players[player] = [jeu, compo_jeu]
-            print(f"The best game of {player} is a {jeu} :\n{compo_jeu}\n")
+            print(f"The best game of {player} is a {jeu} :\n{compo_jeu[0].name} {compo_jeu[1].name} {compo_jeu[2].name} {compo_jeu[3].name} {compo_jeu[4].name}\n")
             value_jeux = order_jeu_invert[jeu]
             if value_jeux > meilleur_value_jeu:
                 meilleur_value_jeu = value_jeux
     for player in players_inf_turn:
         if players_inf_turn[player][2] == True:
-            if order_jeu_invert[jeux_players[player]] != meilleur_value_jeu:
+            if order_jeu_invert[jeux_players[player][0]] != meilleur_value_jeu:
                 players_inf_turn[player][2] == False
             else:
                 print(f"{player} win the hand with {jeux_players[player][0]} !\n")
@@ -355,6 +355,28 @@ def function_biggest_bet(street, game_type):
         biggest_bet = 0
     return biggest_bet
 
+def function_temporary_decision_1(player, pot, biggest_bet, players_inf_turn):
+    while True:
+        try:
+            decision = str(input(f"\nThis is the turn of {player}. The pot contain {pot}$." + "\n" + f"The biggest bet is {biggest_bet}$. The current mise of {player} is {players_inf_turn[player][5]}$." + "\n\n" + f"Possible action are check or raise : "))
+            if (decision == "check") or (decision == "raise"):
+                return decision
+            else:
+                print("Please enter a input!")
+        except ValueError:
+            print("Please enter a input!")
+
+def function_temporary_decision_2(player, pot, biggest_bet, players_inf_turn):
+    while True:
+        try:
+            decision = str(input(f"\nThis is the turn of {player}. The pot contain {pot}$." + "\n" + f"The biggest bet is {biggest_bet}$. The current mise of {player} is {players_inf_turn[player][5]}$." + "\n\n" + f"Possible action are fold, call or reraise : "))
+            if (decision == "fold") or (decision == "call") or (decision == "reraise"):
+                return decision
+            else:
+                print("Please enter a input!")
+        except ValueError:
+            print("Please enter a input!")
+
 def new_street(players_inf_turn, pot, game_type, street="preflop"):
     biggest_bet = function_biggest_bet(street, game_type)
     count_eliminated_player = 0
@@ -362,8 +384,9 @@ def new_street(players_inf_turn, pot, game_type, street="preflop"):
     while (count_eliminated_player != len(players_inf_turn) - 1) and (action == True):
         action = False
         for player in order_of_play(players_inf_turn):
+            print(count_eliminated_player)
             if (players_inf_turn[player][2]) and (players_inf_turn[player][5] == biggest_bet) and (players_inf_turn[player][1] > players_inf_turn[player][4]) and (count_eliminated_player != len(players_inf_turn) - 1):
-                temporary_decision = input(f"\nThis is the turn of {player}. The pot contain {pot}$." + "\n" + f"The biggest bet is {biggest_bet}$. The current mise of {player} is {players_inf_turn[player][5]}$." + "\n\n" + f"Possible action are check or raise : ")
+                temporary_decision = function_temporary_decision_1(player, pot, biggest_bet, players_inf_turn)
                 if temporary_decision == "check":
                     print(f"{player} check")
                     action = False
@@ -374,7 +397,7 @@ def new_street(players_inf_turn, pot, game_type, street="preflop"):
                     players_inf_turn[player][5] = biggest_bet
                     print(f"{player} raise {biggest_bet}$")
             elif (players_inf_turn[player][2]) and (players_inf_turn[player][5] < biggest_bet) and (players_inf_turn[player][1] > players_inf_turn[player][4]) and (count_eliminated_player != len(players_inf_turn) - 1):
-                temporary_decision = input(f"\nThis is the turn of {player}. The pot contain {pot}$." + "\n" + f"The biggest bet is {biggest_bet}$. The current mise of {player} is {players_inf_turn[player][5]}$." + "\n\n" + f"Possible action are fold, call or reraise : ")
+                temporary_decision = function_temporary_decision_2(player, pot, biggest_bet, players_inf_turn)
                 if temporary_decision == "fold":
                     print(f"{player} fold")
                     count_eliminated_player += 1
