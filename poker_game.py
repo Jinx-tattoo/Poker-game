@@ -317,7 +317,7 @@ def determine_best_game(players_inf_turn, displayed_card):
     for player in players_inf_turn:
         if players_inf_turn[player][2] == True:
             if order_jeu_invert[jeux_players[player][0]] != meilleur_value_jeu:
-                players_inf_turn[player][2] == False
+                players_inf_turn[player][2] = False
             else:
                 print(f"{player} win the hand with {jeux_players[player][0]} !\n")
     return
@@ -377,48 +377,62 @@ def function_temporary_decision_2(player, pot, biggest_bet, players_inf_turn):
         except ValueError:
             print("Please enter a input!")
 
+def function_action_player(player, count_player_action, temporary_decision):
+    if temporary_decision == "raise" or temporary_decision == "reraise":
+        for element in count_player_action:
+            count_player_action[element] = 0
+        count_player_action[player] = 1
+        return count_player_action
+    elif temporary_decision == "call" or temporary_decision == "check":
+        count_player_action[player] = 1
+        return count_player_action
+
 def new_street(players_inf_turn, pot, game_type, street="preflop"):
     biggest_bet = function_biggest_bet(street, game_type)
     count_eliminated_player = 0
     action = True
+    count_player_action = {player: 0 for player in players_inf_turn}
     while (count_eliminated_player != len(players_inf_turn) - 1) and (action == True):
         action = False
         for player in order_of_play(players_inf_turn):
-            print(count_eliminated_player)
-            if (players_inf_turn[player][2]) and (players_inf_turn[player][5] == biggest_bet) and (players_inf_turn[player][1] > players_inf_turn[player][4]) and (count_eliminated_player != len(players_inf_turn) - 1):
+            if (players_inf_turn[player][2]) and (players_inf_turn[player][5] == biggest_bet) and (players_inf_turn[player][1] > players_inf_turn[player][4]) and (count_eliminated_player != len(players_inf_turn) - 1) and (count_player_action[player] == 0):
                 temporary_decision = function_temporary_decision_1(player, pot, biggest_bet, players_inf_turn)
                 if temporary_decision == "check":
                     print(f"{player} check")
                     action = False
+                    count_player_action = function_action_player(player, count_player_action, temporary_decision)
                 elif temporary_decision == "raise":
                     action = True
                     biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn[player][1])
-                    pot += biggest_bet - players_inf_turn[player][5]
-                    players_inf_turn[player][5] = biggest_bet
+                    pot += biggest_bet 
+                    players_inf_turn[player][5] += biggest_bet
                     print(f"{player} raise {biggest_bet}$")
-            elif (players_inf_turn[player][2]) and (players_inf_turn[player][5] < biggest_bet) and (players_inf_turn[player][1] > players_inf_turn[player][4]) and (count_eliminated_player != len(players_inf_turn) - 1):
+                    count_player_action = function_action_player(player, count_player_action, temporary_decision)
+            elif (players_inf_turn[player][2]) and (players_inf_turn[player][5] < biggest_bet) and (players_inf_turn[player][1] > players_inf_turn[player][4]) and (count_eliminated_player != len(players_inf_turn) - 1) and (count_player_action[player] == 0):
                 temporary_decision = function_temporary_decision_2(player, pot, biggest_bet, players_inf_turn)
                 if temporary_decision == "fold":
                     print(f"{player} fold")
                     count_eliminated_player += 1
                     players_inf_turn[player][2] = False
                 elif temporary_decision == "call":
-                    action = False
                     if (players_inf_turn[player][1] - players_inf_turn[player][4] + players_inf_turn[player][5]) <= biggest_bet: 
                         pot += players_inf_turn[player][1] - players_inf_turn[player][4] - players_inf_turn[player][5]
                         print(f"{player} call for {players_inf_turn[player][5]}." + "\n" + f"the pot is now {pot}.\n")
                         players_inf_turn[player][5] = players_inf_turn[player][1] - players_inf_turn[player][4]
+                        count_player_action = function_action_player(player, count_player_action, temporary_decision)
                     else:
                         pot += biggest_bet - players_inf_turn[player][5]
                         print(f"{player} call for {biggest_bet - players_inf_turn[player][5]}." + "\n" + f"the pot is now {pot}.\n")
-                        players_inf_turn[player][5] = biggest_bet 
+                        players_inf_turn[player][5] = biggest_bet
+                        count_player_action = function_action_player(player, count_player_action, temporary_decision)
                 elif temporary_decision == "reraise":
                     action = True
                     biggest_bet = get_number_in_range(1.5*biggest_bet, players_inf_turn[player][1])
                     pot += biggest_bet - players_inf_turn[player][5]
                     players_inf_turn[player][5] = biggest_bet
                     print(f"{player} reraise {biggest_bet}$")
-            elif count_eliminated_player != len(players_inf_turn) - 1:
+                    count_player_action = function_action_player(player, count_player_action, temporary_decision)
+            elif (count_eliminated_player != len(players_inf_turn) - 1) and (not players_inf_turn[player][2]):
                 count_eliminated_player += 1
     return pot
         
@@ -447,7 +461,7 @@ def new_hand(players_informations, game_type):
         print(f"\n{player} receive {tirage[0].name} and {tirage[1].name}.")
         deck.remove(tirage[0])
         deck.remove(tirage[1])
-        players_inf_turn[player] = [positions_need[players_informations[player][1]], players_informations[player][0], True, tirage, 0, 0] # {Name_player : [position_jeu, stack, active/out, tirage, amount_invest, invest_street]}    
+        players_inf_turn[player] = [positions_need[players_informations[player][1]], players_informations[player][0], True, tirage, 0, 0, 0] # {Name_player : [position_jeu, stack, active/out, tirage, amount_invest, invest_street, count_action]}    
     blindes(players_inf_turn, game_type)
     pot = new_street(players_inf_turn, pot, game_type)
     update_amount_invest(players_inf_turn)
