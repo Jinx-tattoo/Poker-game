@@ -57,11 +57,11 @@ def activate_player(players_informations, game_type):
                 player_out.append(player)
             else:
                 players_informations[player][2] = False
-        elif (motivation == "yes") and (players_informations[player][1] == 0):
+        elif (motivation == "yes") and (players_informations[player][0] == 0):
             restack = resatck(10/100 * list_stack[game_type], list_stack[game_type])
             players_informations[player][3] += restack
-            players_informations[player][1] = restack
-        elif (players_informations[player][1] > 0) and (motivation == "yes"): 
+            players_informations[player][0] = restack
+        elif (players_informations[player][0] > 0) and (motivation == "yes"): 
             players_informations[player][2] = True
     return players_informations, player_out
 
@@ -169,29 +169,45 @@ def update_stack(players_inf_turn, pot):
             players_inf_turn[player][1] -= players_inf_turn[player][4]
             print(f"{player} lose {players_inf_turn[player][4]}$. Stack updated : {players_inf_turn[player][1]}$.")
             players_inf_turn[player][4] = 0
-            players_inf_turn[player][5] = 0      
+            players_inf_turn[player][5] = 0    
+    print("\n-----------------------------------------------------------------------------------------------------\n")  
     return
 
 def find_higher_card_pair_tripps_square_except(composition, card):
-    sett = ordering(list(set(composition)))[1]
-    if sett[0] != card:
-        higher_card = sett[0]
-    else: 
-        higher_card = sett[1]
-    return higher_card
+    compo = ordering(composition)[1]
+    for i in range(len(compo)):
+        if compo[i].figure != card.figure:
+            return compo[i]
+    return compo[0]
     
 
+# def ordering(composition):
+#     composition_ordered_v = []
+#     composition_ordered_v_dico = {}
+#     composition_ordered = composition.copy()
+#     for card in composition:
+#         composition_ordered_v.append(card.valeur)
+#         composition_ordered_v_dico[card.valeur] = card
+#     composition_ordered_v.sort()
+#     for index, i in zip(composition_ordered_v, range(len(composition_ordered_v))):
+#         composition_ordered[i] = composition_ordered_v_dico[index]
+#     composition_ordered_declining = list(reversed(composition_ordered))
+#     return composition_ordered, composition_ordered_declining
+
 def ordering(composition):
-    composition_ordered_v = []
-    composition_ordered_v_dico = {}
+    # Input validation
+    if not composition:
+        return [], []
+    
+    # Create copy to avoid modifying original
     composition_ordered = composition.copy()
-    for card in composition:
-        composition_ordered_v.append(card.valeur)
-        composition_ordered_v_dico[card.valeur] = card
-    composition_ordered_v.sort()
-    for index, i in zip(composition_ordered_v, range(len(composition_ordered_v))):
-        composition_ordered[i] = composition_ordered_v_dico[index]
-    composition_ordered_declining = list(reversed(composition_ordered))
+    
+    # Sort directly using value attribute
+    composition_ordered.sort(key=lambda card: card.valeur)
+    
+    # Create reversed version
+    composition_ordered_declining = composition_ordered[::-1]
+    
     return composition_ordered, composition_ordered_declining
 
 def flush(composition):
@@ -201,65 +217,83 @@ def flush(composition):
         list_color.append(card.color)
     for color in Card.colors:
         count = list_color.count(color)
-        if count > 4:
-            if list_color[:2].count(color) == 0:
-                break
-            else:               
-                for card in ordering(composition)[1]:
-                    if card.color == color:
-                        compo.append(card)
-                return True, compo
+        if count > 4:              
+            for card in ordering(composition)[1]:
+                if card.color == color:
+                    compo.append(card)
+            return True, compo
     return False, composition
     
 def quint(composition):
     compo = ordering(composition)[0]
     for i in range(2, -1, -1):
+        count = 0
         for j in compo[i:i+4]:
-            if Card.valeur_card[compo[i+1].figure] - Card.valeur_card[compo[i].figure] != 1:           
-                continue
+            if Card.valeur_card[compo[i+1].figure] - Card.valeur_card[compo[i].figure] == 1:           
+                count += 1
             else:
-                return False, composition
-        return True, compo[i:i+5]
+                break
+        if count == 5:
+            return True, compo[i:i+5]
+    return False, composition
     
 
 def square(composition):
+    compo = ordering(composition)[1]
+    compo_2 = [card.figure for card in compo]
+    jeu = []
     for card in composition:
-        if composition.count(card) == 4:
-            high_card = find_higher_card_pair_tripps_square_except(composition, card)
-            return True, [card, card, card, card, high_card]
+        if compo_2.count(card.figure) == 4:
+            jeu.append(card)
+            if len(jeu) == 3:
+                for i in range(2):
+                    high_card = find_higher_card_pair_tripps_square_except(compo, card)
+                    jeu.append(high_card)
+                    compo.remove(high_card)
+                return True, jeu
     return False, composition
 
 def tripps(composition):
     compo = ordering(composition)[1]
+    compo_2 = [card.figure for card in compo]
+    jeu = []
     for card in compo:
-        if compo.count(card) == 3:
-            high_card = find_higher_card_pair_tripps_square_except(composition, card)
-            return True, [card, card, card, high_card]
+        if compo_2.count(card.figure) == 3:
+            jeu.append(card)
+            if len(jeu) == 3:
+                for i in range(2):
+                    high_card = find_higher_card_pair_tripps_square_except(compo, card)
+                    jeu.append(high_card)
+                    compo.remove(high_card)
+                return True, jeu
     return False, composition
 
 def double_pair(composition):
     compo = ordering(composition)[1]
+    compo_2 = [card.figure for card in compo]
     jeu = []
     for card in compo:
-        if compo.count(card) == 2 and (card not in jeu):
-            jeu.append(card)
+        if compo_2.count(card.figure) == 2:
             jeu.append(card)
             if len(jeu) == 4:
                 high_card = find_higher_card_pair_tripps_square_except(composition, card)
                 jeu.append(high_card)
-                return True, jeu
+                return True, jeu        
     return False, composition
         
 def pair(composition):
     compo = ordering(composition)[1]
+    compo_2 = [card.figure for card in compo]
+    jeu = []
     for card in compo:
-        if compo.count(card) == 2:
-            high_card = find_higher_card_pair_tripps_square_except(compo, card)
-            compo.remove(high_card)
-            high_card_2 = find_higher_card_pair_tripps_square_except(compo, card)
-            compo.remove(high_card_2)
-            high_card_3 = find_higher_card_pair_tripps_square_except(compo, card)
-            return True, [card, card, high_card, high_card_2, high_card_3]
+        if compo_2.count(card.figure) == 2:
+            jeu.append(card)
+            if len(jeu) == 2:
+                for i in range(3):
+                    high_card = find_higher_card_pair_tripps_square_except(compo, card)
+                    jeu.append(high_card)
+                    compo.remove(high_card)
+                return True, jeu
     return False, composition      
 
 def full(composition):
@@ -281,7 +315,11 @@ def high_card(composition):
         jeu = ordering(composition)[1]
         return True, jeu
 
-def determine_jeu(composition): 
+def determine_jeu(composition):
+    print("\n-----------------------------------------------------------------------------------------------------------------\n")
+    print("Composition of card :\n")
+    for ele in ordering(composition)[1]:
+        print(ele.name)
     if quinte_flush(composition)[0] == True:
         return "quinte flush", quinte_flush(composition)[1]
     elif square(composition)[0] == True:
@@ -300,25 +338,146 @@ def determine_jeu(composition):
         return "pair", pair(composition)[1]
     elif high_card(composition)[0] == True:
         return "high card", high_card(composition)[1]
+#--------------------------------------------------------------------------------------------
+def compare_similar_jeu(meilleur_value_jeu, meilleur_jeu, jeu, compo_jeu):
+    if order_jeu_invert[jeu] > order_jeu_invert[meilleur_value_jeu]:
+        meilleur_value_jeu, meilleur_jeu = jeu, compo_jeu
+        return meilleur_value_jeu, meilleur_jeu
+    
+    elif order_jeu_invert[jeu] == order_jeu_invert[meilleur_value_jeu]:
+        if jeu == "quinte flush": 
+            if compo_jeu[4].valeur > meilleur_jeu[4].valeur:
+                jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                return jeu_copy, compo_jeu_copy
+            else:
+                return meilleur_value_jeu, meilleur_jeu
+        
+            
+        elif jeu == "square":
+            if compo_jeu[0].valeur > meilleur_jeu[0].valeur:
+                jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                return jeu_copy, compo_jeu_copy
+            elif compo_jeu[0].valeur == meilleur_jeu[0].valeur:
+                if compo_jeu[4].valeur > meilleur_jeu[4].valeur:
+                    jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                    return jeu_copy, compo_jeu_copy
+                else:
+                    return meilleur_value_jeu, meilleur_jeu
+            else:
+                return meilleur_value_jeu, meilleur_jeu
+                
+        elif jeu == "full":
+            if compo_jeu[0].valeur > meilleur_jeu[0].valeur:
+                jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                return jeu_copy, compo_jeu_copy
+            elif compo_jeu[0].valeur == meilleur_jeu[0].valeur:
+                if compo_jeu[3].valeur > meilleur_jeu[3].valeur:
+                    jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                    return jeu_copy, compo_jeu_copy
+                else:
+                    return meilleur_value_jeu, meilleur_jeu
+            else:
+                return meilleur_value_jeu, meilleur_jeu
+                
+        elif jeu == "flush":
+            for i in range(len(compo_jeu)):
+                if compo_jeu[i].valeur > meilleur_jeu[i].valeur:
+                    jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                    return jeu_copy, compo_jeu_copy
+                elif compo_jeu[i].valeur < meilleur_jeu[i].valeur:
+                    return meilleur_value_jeu, meilleur_jeu
+            return meilleur_value_jeu, meilleur_jeu
 
+        elif jeu == "quint":
+            if compo_jeu[4].valeur > meilleur_jeu[4].valeur:
+                jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                return jeu_copy, compo_jeu_copy
+            else:
+                return meilleur_value_jeu, meilleur_jeu
+            
+        elif jeu == "tripps":
+            if compo_jeu[0].valeur > meilleur_jeu[0].valeur:
+                jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                return jeu_copy, compo_jeu_copy
+            elif compo_jeu[0].valeur == meilleur_jeu[0].valeur:
+                if compo_jeu[3].valeur > meilleur_jeu[3].valeur:
+                    jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                    return jeu_copy, compo_jeu_copy
+                elif compo_jeu[3].valeur == meilleur_jeu[3].valeur:
+                    if compo_jeu[4].valeur > meilleur_jeu[4].valeur:
+                        jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                        return jeu_copy, compo_jeu_copy
+                    else:
+                        return meilleur_value_jeu, meilleur_jeu
+                else:
+                    return meilleur_value_jeu, meilleur_jeu
+            else:
+                return meilleur_value_jeu, meilleur_jeu
+                    
+        elif jeu == "double pair":
+            if compo_jeu[0].valeur > meilleur_jeu[0].valeur:
+                jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                return jeu_copy, compo_jeu_copy
+            elif compo_jeu[0].valeur == meilleur_jeu[0].valeur:
+                if compo_jeu[2].valeur > meilleur_jeu[2].valeur:
+                    jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                    return jeu_copy, compo_jeu_copy
+                elif compo_jeu[2].valeur == meilleur_jeu[2].valeur:
+                    if compo_jeu[4].valeur > meilleur_jeu[4].valeur:
+                        jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                        return jeu_copy, compo_jeu_copy
+                    else:
+                        return meilleur_value_jeu, meilleur_jeu
+                else:
+                    return meilleur_value_jeu, meilleur_jeu
+            else:
+                return meilleur_value_jeu, meilleur_jeu
+
+        elif jeu == "pair":
+            if compo_jeu[0].valeur > meilleur_jeu[0].valeur:
+                jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                return jeu_copy, compo_jeu_copy
+            elif compo_jeu[0].valeur == meilleur_jeu[0].valeur:
+                for i in range(1, len(compo_jeu)):
+                    if compo_jeu[i].valeur > meilleur_jeu[i].valeur:
+                        jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                        return jeu_copy, compo_jeu_copy
+                    elif compo_jeu[i].valeur < meilleur_jeu[i].valeur:
+                        return meilleur_value_jeu, meilleur_jeu
+                return meilleur_value_jeu, meilleur_jeu
+            else:
+                return meilleur_value_jeu, meilleur_jeu
+                    
+        elif jeu == "high card":
+            for i in range(len(compo_jeu)):
+                if compo_jeu[i].valeur > meilleur_jeu[i].valeur:
+                    jeu_copy, compo_jeu_copy = jeu, compo_jeu.copy()
+                    return jeu_copy, compo_jeu_copy
+                elif compo_jeu[i].valeur < meilleur_jeu[i].valeur:
+                    return meilleur_value_jeu, meilleur_jeu
+            return meilleur_value_jeu, meilleur_jeu
+                
+    else:
+        return meilleur_value_jeu, meilleur_jeu
+# -----------------------------------------------------------------------------------------------------------------
 def determine_best_game(players_inf_turn, displayed_card):
     jeux_players = {}
-    meilleur_value_jeu = -1
+    meilleur_jeu = displayed_card[0] + displayed_card[1] + displayed_card[2]
+    meilleur_value_jeu = "high card"
     for player in players_inf_turn:
         if players_inf_turn[player][2] == True:
             composition = function_composition(players_inf_turn[player], displayed_card)
             jeu, compo_jeu = determine_jeu(composition)
             # jeux_players[players_inf_turn[player][0]] = [jeu, compo_jeu]
             jeux_players[player] = [jeu, compo_jeu]
-            print(f"The best game of {player} is a {jeu} :\n{compo_jeu[0].name} {compo_jeu[1].name} {compo_jeu[2].name} {compo_jeu[3].name} {compo_jeu[4].name}\n")
-            value_jeux = order_jeu_invert[jeu]
-            if value_jeux > meilleur_value_jeu:
-                meilleur_value_jeu = value_jeux
+            print(f"\nThe best game of {player} is a {jeu} :\n{compo_jeu[0].name} {compo_jeu[1].name} {compo_jeu[2].name} {compo_jeu[3].name} {compo_jeu[4].name}\n")
+            meilleur_value_jeu, meilleur_jeu = compare_similar_jeu(meilleur_value_jeu, meilleur_jeu, jeu, compo_jeu)
     for player in players_inf_turn:
         if players_inf_turn[player][2] == True:
-            if order_jeu_invert[jeux_players[player][0]] != meilleur_value_jeu:
+            if jeux_players[player][1] != meilleur_jeu:
                 players_inf_turn[player][2] = False
             else:
+                print("\n-----------------------------------------------------------------------------------------------------\n")
                 print(f"{player} win the hand with {jeux_players[player][0]} !\n")
     return
 
@@ -390,6 +549,9 @@ def function_action_player(player, count_player_action, temporary_decision):
 def new_street(players_inf_turn, pot, game_type, street="preflop"):
     biggest_bet = function_biggest_bet(street, game_type)
     count_eliminated_player = 0
+    for ele in players_inf_turn:
+        if ele[2] == False:
+            count_eliminated_player += 1
     action = True
     count_player_action = {player: 0 for player in players_inf_turn}
     while (count_eliminated_player != len(players_inf_turn) - 1) and (action == True):
@@ -417,12 +579,12 @@ def new_street(players_inf_turn, pot, game_type, street="preflop"):
                 elif temporary_decision == "call":
                     if (players_inf_turn[player][1] - players_inf_turn[player][4] + players_inf_turn[player][5]) <= biggest_bet: 
                         pot += players_inf_turn[player][1] - players_inf_turn[player][4] - players_inf_turn[player][5]
-                        print(f"{player} call for {players_inf_turn[player][5]}." + "\n" + f"the pot is now {pot}.\n")
+                        print(f"{player} call for {players_inf_turn[player][5]}$." + "\n" + f"the pot is now {pot}$.\n")
                         players_inf_turn[player][5] = players_inf_turn[player][1] - players_inf_turn[player][4]
                         count_player_action = function_action_player(player, count_player_action, temporary_decision)
                     else:
                         pot += biggest_bet - players_inf_turn[player][5]
-                        print(f"{player} call for {biggest_bet - players_inf_turn[player][5]}." + "\n" + f"the pot is now {pot}.\n")
+                        print(f"{player} call for {biggest_bet - players_inf_turn[player][5]}$." + "\n" + f"the pot is now {pot}$.\n")
                         players_inf_turn[player][5] = biggest_bet
                         count_player_action = function_action_player(player, count_player_action, temporary_decision)
                 elif temporary_decision == "reraise":
@@ -432,8 +594,6 @@ def new_street(players_inf_turn, pot, game_type, street="preflop"):
                     players_inf_turn[player][5] = biggest_bet
                     print(f"{player} reraise {biggest_bet}$")
                     count_player_action = function_action_player(player, count_player_action, temporary_decision)
-            elif (count_eliminated_player != len(players_inf_turn) - 1) and (not players_inf_turn[player][2]):
-                count_eliminated_player += 1
     return pot
         
 def blindes(players_inf_turn, game_type):
@@ -453,6 +613,7 @@ def function_fold(players_inf_turn):
     return False
 
 def new_hand(players_informations, game_type):
+    print("------------------------------------------------------------------------------------------------------------------------------------------------------\nA new hand is starting ! Here are player's card :")
     deck = deck_creation()
     players_inf_turn = {}
     pot = 1.5/100 * list_stack[game_type]
@@ -461,7 +622,7 @@ def new_hand(players_informations, game_type):
         print(f"\n{player} receive {tirage[0].name} and {tirage[1].name}.")
         deck.remove(tirage[0])
         deck.remove(tirage[1])
-        players_inf_turn[player] = [positions_need[players_informations[player][1]], players_informations[player][0], True, tirage, 0, 0, 0] # {Name_player : [position_jeu, stack, active/out, tirage, amount_invest, invest_street, count_action]}    
+        players_inf_turn[player] = [positions_need[players_informations[player][1]], players_informations[player][0], True, tirage, 0, 0] # {Name_player : [position_jeu, stack, active/out, tirage, amount_invest, invest_street, count_action]}    
     blindes(players_inf_turn, game_type)
     pot = new_street(players_inf_turn, pot, game_type)
     update_amount_invest(players_inf_turn)
@@ -476,7 +637,8 @@ def new_hand(players_informations, game_type):
     if order_show_card == True:
         displayed_card = show_down(deck, displayed_card)
         determine_best_game(players_inf_turn, displayed_card)
-    while state == True:        
+    while state == True:  
+        print("\n-----------------------------------------------------------------\n")      
         displayed_card.append(new_tirage(street, deck))
         pot = new_street(players_inf_turn, pot, game_type, street)
         update_amount_invest(players_inf_turn)
@@ -491,7 +653,7 @@ def new_hand(players_informations, game_type):
             determine_best_game(players_inf_turn, displayed_card)
     update_stack(players_inf_turn, pot)
     for player in players_informations.keys():
-        players_informations[player][1] = players_inf_turn[player][1]
+        players_informations[player][0] = players_inf_turn[player][1]
     return players_informations
 
 def function_state_players(players_informations):
@@ -501,6 +663,8 @@ def function_state_players(players_informations):
     return state_players
 
 def lauch_game():
+    print("\n------------------------------------------------------------------------------------------------------------------------------------------------------\n")
+    print("Welcome in cash game poker party !\n")
     game_type = function_game_type()
     list_players = add_player()
     players_informations = initialize_players_information(list_players, game_type)
@@ -521,6 +685,6 @@ lauch_game()
 
 
 
-         
+     
 
 
